@@ -11,6 +11,17 @@ const (
 	EventNodeDown                      // Node is down now
 )
 
+func (t EventType) String() string {
+	switch t {
+	case EventNodeUp:
+		return "Node Up"
+	case EventNodeDown:
+		return "Node Down"
+	default:
+		return "Unknown EventType"
+	}
+}
+
 type Event interface {
 	Nodes() []NodeData
 	Merge(older Event) Event
