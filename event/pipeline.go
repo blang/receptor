@@ -1,7 +1,7 @@
-package handler
+package event
 
 // EventMerger merges incoming events from inCh if sink could not keep up
-func EventMerger(inCh chan Event) (eventCh chan Event) {
+func Merger(inCh chan Event) (eventCh chan Event) {
 	outCh := make(chan Event)
 	go func(inCh chan Event, outCh chan Event) {
 		var tmpCh chan Event
@@ -30,7 +30,7 @@ func EventMerger(inCh chan Event) (eventCh chan Event) {
 	return outCh
 }
 
-func EventBroadcaster(inCh chan Event, outChs []chan Event) {
+func Broadcaster(inCh chan Event, outChs []chan Event) {
 	go func() {
 		for event := range inCh {
 			for _, outch := range outChs {

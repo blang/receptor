@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/blang/receptor/config"
 	"github.com/blang/receptor/discovery"
+	"github.com/blang/receptor/event"
 	"github.com/blang/receptor/handler"
 	"github.com/blang/receptor/reactor"
 )
@@ -12,7 +13,7 @@ type Service struct {
 	Name     string
 	Reactors []handler.Handler
 	Watchers []handler.Handler
-	EventCh  chan handler.Event
+	EventCh  chan event.Event
 	CloseCh  chan struct{}
 }
 
@@ -33,23 +34,23 @@ func (r *Receptor) Run() {
 
 	for _, service := range r.Services {
 		// TODO: Add Event Merger middleware
-		service.EventCh = make(chan handler.Event)
+		service.EventCh = make(chan event.Event)
 		service.CloseCh = make(chan struct{})
-		var outChs []chan handler.Event
+		var outChs []chan event.Event
 
 		// Start Reactors
 		for _, reactorHandler := range service.Reactors {
-			outCh := make(chan handler.Event)
+			outCh := make(chan event.Event)
 			outChs = append(outChs, outCh)
 
 			// Add Congestion control before each reactor
-			controlledOutCh := handler.EventMerger(outCh)
+			controlledOutCh := event.Merger(outCh)
 
 			go reactorHandler.Handle(controlledOutCh, service.CloseCh)
 		}
 
 		// Broadcast from EventCh to all outChs
-		handler.EventBroadcaster(service.EventCh, outChs)
+		event.Broadcaster(service.EventCh, outChs)
 
 		// Start Watchers
 		for _, watchHandler := range service.Watchers {

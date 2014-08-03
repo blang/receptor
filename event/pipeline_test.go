@@ -1,4 +1,4 @@
-package handler
+package event
 
 import (
 	"sort"
@@ -6,11 +6,11 @@ import (
 	"time"
 )
 
-// Test if EventMerger passes events through one by one if no congestion
-func TestEventMergerPassThrough(t *testing.T) {
+// Test if Merger passes events through one by one if no congestion
+func TestMergerPassThrough(t *testing.T) {
 	inCh := make(chan Event, 1)
-	outCh := EventMerger(inCh)
-	inCh <- Event(&SingleEvent{
+	outCh := Merger(inCh)
+	inCh <- Event(&SingleNode{
 		EName: "Test1",
 	})
 	e1 := <-outCh
@@ -21,7 +21,7 @@ func TestEventMergerPassThrough(t *testing.T) {
 		t.Fatalf("First received event has wrong node name: %s", nodename)
 	}
 
-	inCh <- Event(&SingleEvent{
+	inCh <- Event(&SingleNode{
 		EName: "Test2",
 	})
 	e2 := <-outCh
@@ -34,17 +34,17 @@ func TestEventMergerPassThrough(t *testing.T) {
 	close(inCh)
 }
 
-func TestEventMergerCongestionMerge(t *testing.T) {
+func TestMergerCongestionMerge(t *testing.T) {
 	inCh := make(chan Event)
-	outCh := EventMerger(inCh)
-	inCh <- Event(&SingleEvent{
+	outCh := Merger(inCh)
+	inCh <- Event(&SingleNode{
 		EName: "Test1",
 	})
-	inCh <- Event(&SingleEvent{
+	inCh <- Event(&SingleNode{
 		EName: "Test2",
 		EType: EventNodeUp,
 	})
-	inCh <- Event(&SingleEvent{
+	inCh <- Event(&SingleNode{
 		EName: "Test2",
 		EType: EventNodeDown, // Newest Event: Node is not up anymore
 	})
@@ -57,7 +57,7 @@ func TestEventMergerCongestionMerge(t *testing.T) {
 	}
 
 	nodeEvents := e1.Nodes()
-	sort.Sort(NodeEventByName(nodeEvents))
+	sort.Sort(NodeDataByName(nodeEvents))
 
 	if nodename := e1.Nodes()[0].Name(); nodename != "Test1" {
 		t.Fatalf("Expected Node %s, found instead %s", "Test1", nodename)
@@ -71,7 +71,7 @@ func TestEventMergerCongestionMerge(t *testing.T) {
 		t.Fatalf("Not received last EventType, instead: %s", eventType)
 	}
 
-	inCh <- Event(&SingleEvent{
+	inCh <- Event(&SingleNode{
 		EName: "Test3",
 	})
 	e2 := <-outCh
@@ -92,14 +92,14 @@ func TestEventMergerCongestionMerge(t *testing.T) {
 	}
 }
 
-func TestEventBroadcaster(t *testing.T) {
+func TestBroadcaster(t *testing.T) {
 	inCh := make(chan Event)
 	outCh1 := make(chan Event)
 	outCh2 := make(chan Event)
-	event := Event(&SingleEvent{
+	event := Event(&SingleNode{
 		EName: "Test1",
 	})
-	EventBroadcaster(inCh, []chan Event{outCh1, outCh2})
+	Broadcaster(inCh, []chan Event{outCh1, outCh2})
 	inCh <- event
 	e1 := <-outCh1
 	e2 := <-outCh2
