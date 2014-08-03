@@ -8,8 +8,14 @@ import (
 )
 
 type ServiceConfig struct {
-	Watchers map[string]json.RawMessage `json:"watchers"`
-	Reactors map[string]json.RawMessage `json:"reactors"`
+	// Map unique user-defined name to actor config
+	Watchers map[string]ActorConfig `json:"watchers"`
+	Reactors map[string]ActorConfig `json:"reactors"`
+}
+
+type ActorConfig struct {
+	Type   string          `json:"type"`
+	Config json.RawMessage `json:"cfg"`
 }
 
 type Config struct {
