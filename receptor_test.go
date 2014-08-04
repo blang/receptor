@@ -67,11 +67,17 @@ func TestSystem(t *testing.T) {
 
 	//config
 	serviceConfig := config.ServiceConfig{
-		Watchers: make(map[string]json.RawMessage),
-		Reactors: make(map[string]json.RawMessage),
+		Watchers: make(map[string]config.ActorConfig),
+		Reactors: make(map[string]config.ActorConfig),
 	}
-	serviceConfig.Watchers["testWatcher"] = nil
-	serviceConfig.Reactors["testReactor"] = nil
+	serviceConfig.Watchers["testWatcher1"] = config.ActorConfig{
+		Type:   "testWatcher",
+		Config: nil,
+	}
+	serviceConfig.Reactors["testReactor1"] = config.ActorConfig{
+		Type:   "testReactor",
+		Config: nil,
+	}
 
 	cfg := config.Config{
 		Services: make(map[string]config.ServiceConfig),
@@ -82,7 +88,7 @@ func TestSystem(t *testing.T) {
 	cfg.Watchers["testWatcher"] = nil
 	cfg.Reactors["testReactor"] = nil
 	cfg.Services["testService"] = serviceConfig
-	receptor := &Receptor{}
+	receptor := NewReceptor()
 	err := receptor.Init(cfg)
 	if err != nil {
 		t.Fatalf("Init returned error: %s", err)

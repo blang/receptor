@@ -30,6 +30,10 @@ type Receptor struct {
 	Services []*Service
 }
 
+func NewReceptor() *Receptor {
+	return &Receptor{}
+}
+
 func (r *Receptor) Init(cfg config.Config) error {
 	services, err := r.SetupByConfig(cfg)
 	if err != nil {
