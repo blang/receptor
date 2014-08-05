@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/blang/receptor/discovery"
 	"github.com/blang/receptor/event"
+	"github.com/blang/receptor/handler"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -35,17 +36,17 @@ func TestFunc(t *testing.T) {
 	}
 
 	handle, err := watcher.Accept(json.RawMessage(b))
+	manHandle := handler.NewManagedHandler(handle)
 	if err != nil {
 		t.Fatalf("Watcher accept failed: %s", err)
 	}
 
 	eventCh := make(chan event.Event, 1)
-	closeCh := make(chan struct{})
 
 	watcher.IsRunning = true // Fake Running server
 	testserver := httptest.NewServer(watcher.Router)
 	defer testserver.Close()
-	go handle.Handle(eventCh, closeCh)
+	go manHandle.Handle(eventCh)
 
 	restEvent := &RestEvent{
 		Name: "testservice",
@@ -89,6 +90,13 @@ func TestFunc(t *testing.T) {
 	}
 	if evType := recv.Nodes()[0].Type(); evType != event.EventNodeUp {
 		t.Errorf("Event type was %s, expected %s", evType, event.EventNodeUp)
+	}
+
+	// Check shutdown
+	manHandle.Stop()
+	err = manHandle.WaitTimeout(5 * time.Second)
+	if err != nil {
+		t.Errorf("Stop handle timeout: %s", err)
 	}
 
 }
