@@ -93,7 +93,7 @@ func TestSystem(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Init returned error: %s", err)
 	}
-	receptor.Run()
+	receptor.Start()
 
 	count := 0
 	timeout := time.After(5 * time.Second)
