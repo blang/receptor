@@ -111,12 +111,8 @@ func TestSystem(t *testing.T) {
 		case <-timeout:
 			t.Error("Timeout")
 			return
-			// t.Fail("Timeout")
-
 		}
-
 	}
-
 }
 
 func stringEventNodes(nodes []event.NodeData) string {
