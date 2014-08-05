@@ -7,23 +7,44 @@ import (
 	"github.com/blang/receptor/event"
 	"github.com/blang/receptor/handler"
 	"github.com/blang/receptor/reactor"
+	"sync"
+	"time"
 )
 
 type Service struct {
-	Name     string
-	Reactors map[string]handler.Handler
-	Watchers map[string]handler.Handler
-	EventCh  chan event.Event
-	DoneCh   chan struct{}
+	Name         string
+	Reactors     map[string]*ManagedHandler
+	Watchers     map[string]*ManagedHandler
+	EventCh      chan event.Event
+	CloseTimeout time.Duration
+	DoneCh       chan struct{}
 }
 
 func NewService() *Service {
 	return &Service{
-		Reactors: make(map[string]handler.Handler),
-		Watchers: make(map[string]handler.Handler),
-		EventCh:  make(chan event.Event),
-		DoneCh:   make(chan struct{}),
+		Reactors:     make(map[string]*ManagedHandler),
+		Watchers:     make(map[string]*ManagedHandler),
+		EventCh:      make(chan event.Event),
+		CloseTimeout: 5 * time.Second,
+		DoneCh:       make(chan struct{}),
 	}
+}
+
+type ManagedHandler struct {
+	Handler handler.Handler
+	DoneCh  chan struct{}
+}
+
+func NewManagedHandler(handle handler.Handler) *ManagedHandler {
+	return &ManagedHandler{
+		Handler: handle,
+		DoneCh:  make(chan struct{}),
+	}
+}
+
+func (m *ManagedHandler) Handle(eventCh chan event.Event, closeCh chan struct{}) {
+	m.Handler.Handle(eventCh, closeCh)
+	close(m.DoneCh)
 }
 
 type Receptor struct {
@@ -70,10 +91,42 @@ func (r *Receptor) Run() {
 	}
 }
 
+// Stop stops all registered services and blocks until all stopped or reached timeout.
 func (r *Receptor) Stop() {
+	wg := sync.WaitGroup{}
+	wg.Add(len(r.Services))
 	for _, service := range r.Services {
-		close(service.EventCh)
+		go func() {
+			service.Stop()
+			wg.Done()
+		}()
 	}
+	wg.Wait()
+}
+
+// Stop stops the service and all its watchers and reactors.
+// Blocks until all components are stopped or reach timeout.
+// Closes service doneCh channel.
+func (s *Service) Stop() {
+	close(s.EventCh)
+	for _, manWatcher := range s.Watchers {
+		select {
+		case <-manWatcher.DoneCh:
+		case <-time.After(s.CloseTimeout):
+			//TODO: Handle timeout, error message
+
+		}
+	}
+
+	for _, manReactor := range s.Reactors {
+		select {
+		case <-manReactor.DoneCh:
+		case <-time.After(s.CloseTimeout):
+			//TODO: Handle timeout, error message
+
+		}
+	}
+	close(s.DoneCh)
 }
 
 func (r *Receptor) SetupByConfig(cfg config.Config) ([]*Service, error) {
@@ -111,7 +164,7 @@ func SetupService(name string, cfg config.ServiceConfig) (*Service, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Service %s, Watcher %s, Setup error: %s", service.Name, actorName, err)
 		}
-		service.Watchers[actorName] = handler
+		service.Watchers[actorName] = NewManagedHandler(handler)
 	}
 
 	for actorName, actorCfg := range cfg.Reactors {
@@ -119,7 +172,7 @@ func SetupService(name string, cfg config.ServiceConfig) (*Service, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Service %s, Reactor %s, Setup error: %s", service.Name, actorName, err)
 		}
-		service.Reactors[actorName] = handler
+		service.Reactors[actorName] = NewManagedHandler(handler)
 	}
 	return service, nil
 }
