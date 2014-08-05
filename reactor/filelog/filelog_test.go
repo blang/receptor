@@ -3,7 +3,6 @@ package filelog
 import (
 	"encoding/json"
 	"github.com/blang/receptor/pipeline"
-	"github.com/blang/receptor/handler"
 	"github.com/blang/receptor/reactor"
 	"io/ioutil"
 	"os"
@@ -40,7 +39,7 @@ func TestFunc(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Does not accept config: %s\n", err)
 	}
-	manHandle := handler.NewManagedHandler(handle)
+	manHandle := pipeline.NewManagedHandler(handle)
 
 	eventCh := make(chan pipeline.Event)
 	go manHandle.Handle(eventCh)

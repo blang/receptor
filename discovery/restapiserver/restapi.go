@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/blang/receptor/discovery"
 	"github.com/blang/receptor/pipeline"
-	"github.com/blang/receptor/handler"
 	"net/http"
 )
 
@@ -49,7 +48,7 @@ type RestEvent struct {
 	Port int    `json:"port"`
 }
 
-func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (handler.Handler, error) {
+func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (pipeline.Handler, error) {
 	conf := ServiceConfig{
 		Service: "default",
 	}
@@ -58,7 +57,7 @@ func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (handler.Handler,
 		return nil, err
 	}
 
-	return handler.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipeline.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 
 		w.Router.HandleFunc("/service/"+conf.Service, func(w http.ResponseWriter, r *http.Request) {
 			var restEvent RestEvent

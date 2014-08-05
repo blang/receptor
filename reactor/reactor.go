@@ -2,12 +2,12 @@ package reactor
 
 import (
 	"encoding/json"
-	"github.com/blang/receptor/handler"
+	"github.com/blang/receptor/pipeline"
 )
 
 var Reactors = make(map[string]Reactor)
 
 type Reactor interface {
 	Setup(json.RawMessage) error
-	Accept(json.RawMessage) (handler.Handler, error)
+	Accept(json.RawMessage) (pipeline.Handler, error)
 }

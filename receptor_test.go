@@ -5,7 +5,6 @@ import (
 	"github.com/blang/receptor/config"
 	"github.com/blang/receptor/discovery"
 	"github.com/blang/receptor/pipeline"
-	"github.com/blang/receptor/handler"
 	"github.com/blang/receptor/reactor"
 	"strconv"
 	"strings"
@@ -23,9 +22,9 @@ func (w *testWatcher) Setup(json.RawMessage) error {
 	return nil
 }
 
-func (w *testWatcher) Accept(json.RawMessage) (handler.Handler, error) {
+func (w *testWatcher) Accept(json.RawMessage) (pipeline.Handler, error) {
 	w.acceptCalled = true
-	return handler.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipeline.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 		for i := 0; i < 100; i++ {
 			eventCh <- &pipeline.SingleNode{
 				EName: "test" + strconv.Itoa(i),
@@ -46,9 +45,9 @@ func (r *testReactor) Setup(json.RawMessage) error {
 	r.setupCalled = true
 	return nil
 }
-func (r *testReactor) Accept(json.RawMessage) (handler.Handler, error) {
+func (r *testReactor) Accept(json.RawMessage) (pipeline.Handler, error) {
 	r.acceptCalled = true
-	return handler.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipeline.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 		for e := range eventCh {
 			r.receivedEvents = append(r.receivedEvents, e)
 			r.eventRedirect <- e

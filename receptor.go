@@ -5,7 +5,6 @@ import (
 	"github.com/blang/receptor/config"
 	"github.com/blang/receptor/discovery"
 	"github.com/blang/receptor/pipeline"
-	"github.com/blang/receptor/handler"
 	"github.com/blang/receptor/reactor"
 	"sync"
 	"time"
@@ -49,8 +48,8 @@ func (r *Receptor) Stop() {
 
 type Service struct {
 	Name         string
-	Reactors     map[string]*handler.ManagedHandler
-	Watchers     map[string]*handler.ManagedHandler
+	Reactors     map[string]*pipeline.ManagedHandler
+	Watchers     map[string]*pipeline.ManagedHandler
 	EventCh      chan pipeline.Event
 	CloseTimeout time.Duration
 	DoneCh       chan struct{}
@@ -58,8 +57,8 @@ type Service struct {
 
 func NewService() *Service {
 	return &Service{
-		Reactors:     make(map[string]*handler.ManagedHandler),
-		Watchers:     make(map[string]*handler.ManagedHandler),
+		Reactors:     make(map[string]*pipeline.ManagedHandler),
+		Watchers:     make(map[string]*pipeline.ManagedHandler),
 		EventCh:      make(chan pipeline.Event),
 		CloseTimeout: 5 * time.Second,
 		DoneCh:       make(chan struct{}),
@@ -172,7 +171,7 @@ func SetupService(name string, cfg config.ServiceConfig) (*Service, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Service %s, Watcher %s, Setup error: %s", service.Name, actorName, err)
 		}
-		service.Watchers[actorName] = handler.NewManagedHandler(handle)
+		service.Watchers[actorName] = pipeline.NewManagedHandler(handle)
 	}
 
 	for actorName, actorCfg := range cfg.Reactors {
@@ -180,13 +179,13 @@ func SetupService(name string, cfg config.ServiceConfig) (*Service, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Service %s, Reactor %s, Setup error: %s", service.Name, actorName, err)
 		}
-		service.Reactors[actorName] = handler.NewManagedHandler(handle)
+		service.Reactors[actorName] = pipeline.NewManagedHandler(handle)
 	}
 	return service, nil
 }
 
 // SetupWatcher registers a watcher with the service specific config.
-func SetupWatcher(cfg config.ActorConfig) (handler.Handler, error) {
+func SetupWatcher(cfg config.ActorConfig) (pipeline.Handler, error) {
 	watcher, ok := discovery.Watchers[cfg.Type]
 	if !ok {
 		return nil, fmt.Errorf("Could not setup watcher %s, watcher type not found", cfg.Type)
@@ -199,7 +198,7 @@ func SetupWatcher(cfg config.ActorConfig) (handler.Handler, error) {
 }
 
 // SetupReactor registers a reactor with the service specific config.
-func SetupReactor(cfg config.ActorConfig) (handler.Handler, error) {
+func SetupReactor(cfg config.ActorConfig) (pipeline.Handler, error) {
 	react, ok := reactor.Reactors[cfg.Type]
 	if !ok {
 		return nil, fmt.Errorf("Could not setup reactor %s, reactor type not found", cfg.Type)

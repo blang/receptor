@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/blang/receptor/discovery"
 	"github.com/blang/receptor/pipeline"
-	"github.com/blang/receptor/handler"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -36,7 +35,7 @@ func TestFunc(t *testing.T) {
 	}
 
 	handle, err := watcher.Accept(json.RawMessage(b))
-	manHandle := handler.NewManagedHandler(handle)
+	manHandle := pipeline.NewManagedHandler(handle)
 	if err != nil {
 		t.Fatalf("Watcher accept failed: %s", err)
 	}
