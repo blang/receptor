@@ -10,9 +10,9 @@ type Endpoint interface {
 	Handle(eventCh chan Event, closeCh chan struct{})
 }
 
-type HandlerFunc func(eventCh chan Event, closeCh chan struct{})
+type EndpointFunc func(eventCh chan Event, closeCh chan struct{})
 
-func (f HandlerFunc) Handle(eventCh chan Event, closeCh chan struct{}) {
+func (f EndpointFunc) Handle(eventCh chan Event, closeCh chan struct{}) {
 	f(eventCh, closeCh)
 }
 

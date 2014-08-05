@@ -30,7 +30,7 @@ func (r *FileLogReactor) Accept(cfgData json.RawMessage) (pipeline.Endpoint, err
 	f, err := os.OpenFile(cfg.Filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	bufW := bufio.NewWriter(f)
 
-	return pipeline.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipeline.EndpointFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 		defer func() {
 			bufW.Flush()
 			f.Close()

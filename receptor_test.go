@@ -24,7 +24,7 @@ func (w *testWatcher) Setup(json.RawMessage) error {
 
 func (w *testWatcher) Accept(json.RawMessage) (pipeline.Endpoint, error) {
 	w.acceptCalled = true
-	return pipeline.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipeline.EndpointFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 		for i := 0; i < 100; i++ {
 			eventCh <- &pipeline.SingleNode{
 				EName: "test" + strconv.Itoa(i),
@@ -47,7 +47,7 @@ func (r *testReactor) Setup(json.RawMessage) error {
 }
 func (r *testReactor) Accept(json.RawMessage) (pipeline.Endpoint, error) {
 	r.acceptCalled = true
-	return pipeline.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipeline.EndpointFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 		for e := range eventCh {
 			r.receivedEvents = append(r.receivedEvents, e)
 			r.eventRedirect <- e

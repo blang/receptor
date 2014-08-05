@@ -57,7 +57,7 @@ func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (pipeline.Endpoin
 		return nil, err
 	}
 
-	return pipeline.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipeline.EndpointFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 
 		w.Router.HandleFunc("/service/"+conf.Service, func(w http.ResponseWriter, r *http.Request) {
 			var restEvent RestEvent
