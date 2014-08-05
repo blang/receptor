@@ -1,4 +1,4 @@
-package event
+package pipeline
 
 // EventMerger merges incoming events from inCh if sink could not keep up
 func Merger(inCh chan Event) (eventCh chan Event) {

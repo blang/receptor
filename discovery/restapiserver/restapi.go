@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/blang/receptor/discovery"
-	"github.com/blang/receptor/event"
+	"github.com/blang/receptor/pipeline"
 	"github.com/blang/receptor/handler"
 	"net/http"
 )
@@ -58,7 +58,7 @@ func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (handler.Handler,
 		return nil, err
 	}
 
-	return handler.HandlerFunc(func(eventCh chan event.Event, closeCh chan struct{}) {
+	return handler.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 
 		w.Router.HandleFunc("/service/"+conf.Service, func(w http.ResponseWriter, r *http.Request) {
 			var restEvent RestEvent
@@ -69,19 +69,19 @@ func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (handler.Handler,
 				return
 			}
 
-			var eventType event.EventType
+			var eventType pipeline.EventType
 			switch restEvent.Type {
 			case "nodeup":
-				eventType = event.EventNodeUp
+				eventType = pipeline.EventNodeUp
 			case "nodedown":
-				eventType = event.EventNodeDown
+				eventType = pipeline.EventNodeDown
 			default:
 				w.WriteHeader(http.StatusBadRequest)
 				fmt.Fprintln(w, "Bad request: Invalid event type")
 				return
 			}
 
-			eventCh <- &event.SingleNode{
+			eventCh <- &pipeline.SingleNode{
 				EName: restEvent.Name,
 				EHost: restEvent.Host,
 				EPort: restEvent.Port,

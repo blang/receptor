@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/blang/receptor/config"
 	"github.com/blang/receptor/discovery"
-	"github.com/blang/receptor/event"
+	"github.com/blang/receptor/pipeline"
 	"github.com/blang/receptor/handler"
 	"github.com/blang/receptor/reactor"
 	"sync"
@@ -51,7 +51,7 @@ type Service struct {
 	Name         string
 	Reactors     map[string]*handler.ManagedHandler
 	Watchers     map[string]*handler.ManagedHandler
-	EventCh      chan event.Event
+	EventCh      chan pipeline.Event
 	CloseTimeout time.Duration
 	DoneCh       chan struct{}
 }
@@ -60,7 +60,7 @@ func NewService() *Service {
 	return &Service{
 		Reactors:     make(map[string]*handler.ManagedHandler),
 		Watchers:     make(map[string]*handler.ManagedHandler),
-		EventCh:      make(chan event.Event),
+		EventCh:      make(chan pipeline.Event),
 		CloseTimeout: 5 * time.Second,
 		DoneCh:       make(chan struct{}),
 	}
@@ -69,21 +69,21 @@ func NewService() *Service {
 // Start starts the service.
 // It creates a pipeline between all watchers and reactors and starts them.
 func (s *Service) Start() {
-	var outChs []chan event.Event
+	var outChs []chan pipeline.Event
 
 	// Start Reactors
 	for _, reactorManHandler := range s.Reactors {
-		outCh := make(chan event.Event)
+		outCh := make(chan pipeline.Event)
 		outChs = append(outChs, outCh)
 
 		// Add Congestion control before each reactor
-		controlledOutCh := event.Merger(outCh)
+		controlledOutCh := pipeline.Merger(outCh)
 
 		go reactorManHandler.Handle(controlledOutCh)
 	}
 
 	// Broadcast from EventCh to all outChs
-	event.Broadcaster(s.EventCh, outChs)
+	pipeline.Broadcaster(s.EventCh, outChs)
 
 	// Start Watchers
 	for _, watchManHandler := range s.Watchers {

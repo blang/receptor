@@ -2,18 +2,18 @@ package handler
 
 import (
 	"errors"
-	"github.com/blang/receptor/event"
+	"github.com/blang/receptor/pipeline"
 	"time"
 )
 
 type Handler interface {
 	// Started in seperate go routine
-	Handle(eventCh chan event.Event, closeCh chan struct{})
+	Handle(eventCh chan pipeline.Event, closeCh chan struct{})
 }
 
-type HandlerFunc func(eventCh chan event.Event, closeCh chan struct{})
+type HandlerFunc func(eventCh chan pipeline.Event, closeCh chan struct{})
 
-func (f HandlerFunc) Handle(eventCh chan event.Event, closeCh chan struct{}) {
+func (f HandlerFunc) Handle(eventCh chan pipeline.Event, closeCh chan struct{}) {
 	f(eventCh, closeCh)
 }
 
@@ -37,7 +37,7 @@ func NewManagedHandler(handle Handler) *ManagedHandler {
 
 // Handle starts the wrapped handler on the given eventChannel and closes the DoneCh if handler returns.
 // Blocks until handler returns.
-func (m *ManagedHandler) Handle(eventCh chan event.Event) {
+func (m *ManagedHandler) Handle(eventCh chan pipeline.Event) {
 	m.Handler.Handle(eventCh, m.CloseCh)
 	close(m.DoneCh)
 }

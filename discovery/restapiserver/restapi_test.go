@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/blang/receptor/discovery"
-	"github.com/blang/receptor/event"
+	"github.com/blang/receptor/pipeline"
 	"github.com/blang/receptor/handler"
 	"net/http"
 	"net/http/httptest"
@@ -41,7 +41,7 @@ func TestFunc(t *testing.T) {
 		t.Fatalf("Watcher accept failed: %s", err)
 	}
 
-	eventCh := make(chan event.Event, 1)
+	eventCh := make(chan pipeline.Event, 1)
 
 	watcher.IsRunning = true // Fake Running server
 	testserver := httptest.NewServer(watcher.Router)
@@ -68,7 +68,7 @@ func TestFunc(t *testing.T) {
 	}
 
 	// Check if event was fired
-	var recv event.Event
+	var recv pipeline.Event
 	select {
 	case recv = <-eventCh:
 	case <-time.After(5 * time.Second):
@@ -88,8 +88,8 @@ func TestFunc(t *testing.T) {
 	if evPort := recv.Nodes()[0].Port(); evPort != restEvent.Port {
 		t.Errorf("Event port was %s, expected %s", evPort, restEvent.Port)
 	}
-	if evType := recv.Nodes()[0].Type(); evType != event.EventNodeUp {
-		t.Errorf("Event type was %s, expected %s", evType, event.EventNodeUp)
+	if evType := recv.Nodes()[0].Type(); evType != pipeline.EventNodeUp {
+		t.Errorf("Event type was %s, expected %s", evType, pipeline.EventNodeUp)
 	}
 
 	// Check shutdown

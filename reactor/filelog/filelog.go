@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/blang/receptor/event"
+	"github.com/blang/receptor/pipeline"
 	"github.com/blang/receptor/handler"
 	"os"
 	"time"
@@ -31,7 +31,7 @@ func (r *FileLogReactor) Accept(cfgData json.RawMessage) (handler.Handler, error
 	f, err := os.OpenFile(cfg.Filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	bufW := bufio.NewWriter(f)
 
-	return handler.HandlerFunc(func(eventCh chan event.Event, closeCh chan struct{}) {
+	return handler.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 		defer func() {
 			bufW.Flush()
 			f.Close()

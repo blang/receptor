@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/blang/receptor/config"
 	"github.com/blang/receptor/discovery"
-	"github.com/blang/receptor/event"
+	"github.com/blang/receptor/pipeline"
 	"github.com/blang/receptor/handler"
 	"github.com/blang/receptor/reactor"
 	"strconv"
@@ -25,11 +25,11 @@ func (w *testWatcher) Setup(json.RawMessage) error {
 
 func (w *testWatcher) Accept(json.RawMessage) (handler.Handler, error) {
 	w.acceptCalled = true
-	return handler.HandlerFunc(func(eventCh chan event.Event, closeCh chan struct{}) {
+	return handler.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 		for i := 0; i < 100; i++ {
-			eventCh <- &event.SingleNode{
+			eventCh <- &pipeline.SingleNode{
 				EName: "test" + strconv.Itoa(i),
-				EType: event.EventNodeUp,
+				EType: pipeline.EventNodeUp,
 			}
 		}
 	}), nil
@@ -38,8 +38,8 @@ func (w *testWatcher) Accept(json.RawMessage) (handler.Handler, error) {
 type testReactor struct {
 	setupCalled    bool
 	acceptCalled   bool
-	receivedEvents []event.Event
-	eventRedirect  chan event.Event
+	receivedEvents []pipeline.Event
+	eventRedirect  chan pipeline.Event
 }
 
 func (r *testReactor) Setup(json.RawMessage) error {
@@ -48,7 +48,7 @@ func (r *testReactor) Setup(json.RawMessage) error {
 }
 func (r *testReactor) Accept(json.RawMessage) (handler.Handler, error) {
 	r.acceptCalled = true
-	return handler.HandlerFunc(func(eventCh chan event.Event, closeCh chan struct{}) {
+	return handler.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 		for e := range eventCh {
 			r.receivedEvents = append(r.receivedEvents, e)
 			r.eventRedirect <- e
@@ -60,7 +60,7 @@ func (r *testReactor) Accept(json.RawMessage) (handler.Handler, error) {
 func TestSystem(t *testing.T) {
 	watcher := &testWatcher{}
 	react := &testReactor{
-		eventRedirect: make(chan event.Event),
+		eventRedirect: make(chan pipeline.Event),
 	}
 	discovery.Watchers["testWatcher"] = watcher
 	reactor.Reactors["testReactor"] = react
@@ -115,7 +115,7 @@ func TestSystem(t *testing.T) {
 	}
 }
 
-func stringEventNodes(nodes []event.NodeData) string {
+func stringEventNodes(nodes []pipeline.NodeData) string {
 	var str []string
 	for _, n := range nodes {
 		str = append(str, n.Name())

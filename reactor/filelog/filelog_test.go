@@ -2,7 +2,7 @@ package filelog
 
 import (
 	"encoding/json"
-	"github.com/blang/receptor/event"
+	"github.com/blang/receptor/pipeline"
 	"github.com/blang/receptor/handler"
 	"github.com/blang/receptor/reactor"
 	"io/ioutil"
@@ -42,19 +42,19 @@ func TestFunc(t *testing.T) {
 	}
 	manHandle := handler.NewManagedHandler(handle)
 
-	eventCh := make(chan event.Event)
+	eventCh := make(chan pipeline.Event)
 	go manHandle.Handle(eventCh)
 
-	eventCh <- &event.SingleNode{
+	eventCh <- &pipeline.SingleNode{
 		EName: "Node1",
-		EType: event.EventNodeUp,
+		EType: pipeline.EventNodeUp,
 		EHost: "127.0.0.1",
 		EPort: 8080,
 	}
 
-	eventCh <- &event.SingleNode{
+	eventCh <- &pipeline.SingleNode{
 		EName: "Node2",
-		EType: event.EventNodeDown,
+		EType: pipeline.EventNodeDown,
 		EHost: "127.0.0.1",
 		EPort: 8080,
 	}
