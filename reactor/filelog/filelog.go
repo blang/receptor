@@ -31,17 +31,27 @@ func (r *FileLogReactor) Accept(cfgData json.RawMessage) (handler.Handler, error
 	f, err := os.OpenFile(cfg.Filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	bufW := bufio.NewWriter(f)
 
-	return handler.HandlerFunc(func(eventCh chan event.Event, doneCh chan struct{}) {
-		for e := range eventCh {
-			for _, node := range e.Nodes() {
-				fmt.Fprintf(bufW, "%s: %s (%s) %s:%d\n", time.Now(), node.Name(), node.Type(), node.Host(), node.Port())
-			}
-			if cfg.Unbuffered {
-				bufW.Flush()
+	return handler.HandlerFunc(func(eventCh chan event.Event, closeCh chan struct{}) {
+		defer func() {
+			bufW.Flush()
+			f.Close()
+		}()
+		for {
+			select {
+			case e, ok := <-eventCh:
+				if !ok {
+					return
+				}
+				for _, node := range e.Nodes() {
+					fmt.Fprintf(bufW, "%s: %s (%s) %s:%d\n", time.Now(), node.Name(), node.Type(), node.Host(), node.Port())
+				}
+				if cfg.Unbuffered {
+					bufW.Flush()
+				}
+			case <-closeCh:
+				return
 			}
 		}
-		bufW.Flush()
-		f.Close()
-		close(doneCh)
+
 	}), nil
 }

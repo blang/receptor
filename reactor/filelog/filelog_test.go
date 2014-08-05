@@ -3,11 +3,13 @@ package filelog
 import (
 	"encoding/json"
 	"github.com/blang/receptor/event"
+	"github.com/blang/receptor/handler"
 	"github.com/blang/receptor/reactor"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestFunc(t *testing.T) {
@@ -34,14 +36,14 @@ func TestFunc(t *testing.T) {
 		t.Fatalf("Test internal failed: %s\n", err)
 	}
 
-	handler, err := react.Accept(json.RawMessage(b))
+	handle, err := react.Accept(json.RawMessage(b))
 	if err != nil {
 		t.Fatalf("Does not accept config: %s\n", err)
 	}
+	manHandle := handler.NewManagedHandler(handle)
 
 	eventCh := make(chan event.Event)
-	doneCh := make(chan struct{})
-	go handler.Handle(eventCh, doneCh)
+	go manHandle.Handle(eventCh)
 
 	eventCh <- &event.SingleNode{
 		EName: "Node1",
@@ -58,8 +60,12 @@ func TestFunc(t *testing.T) {
 	}
 
 	close(eventCh)
+	manHandle.Stop()
+	err = manHandle.WaitTimeout(2 * time.Second)
+	if err != nil {
+		t.Fatal("Stop timed out")
+	}
 
-	<-doneCh
 	data, err := ioutil.ReadFile(tmpFile.Name())
 	lines := strings.Split(string(data), "\n")
 	if countLines := len(lines); countLines != 3 {

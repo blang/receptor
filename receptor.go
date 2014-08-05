@@ -47,37 +47,10 @@ func (r *Receptor) Stop() {
 	wg.Wait()
 }
 
-type ManagedHandler struct {
-	Handler handler.Handler
-	DoneCh  chan struct{}
-	CloseCh chan struct{}
-}
-
-// NewManagedHandler creates a wrapper around an handler which manages the shutdown behaviour.
-func NewManagedHandler(handle handler.Handler) *ManagedHandler {
-	return &ManagedHandler{
-		Handler: handle,
-		DoneCh:  make(chan struct{}),
-		CloseCh: make(chan struct{}),
-	}
-}
-
-// Handle starts the wrapped handler on the given eventChannel and closes the DoneCh if handler returns.
-// Blocks until handler returns.
-func (m *ManagedHandler) Handle(eventCh chan event.Event) {
-	m.Handler.Handle(eventCh, m.CloseCh)
-	close(m.DoneCh)
-}
-
-// Stop signals the handler to exit.
-func (m *ManagedHandler) Stop() {
-	close(m.CloseCh)
-}
-
 type Service struct {
 	Name         string
-	Reactors     map[string]*ManagedHandler
-	Watchers     map[string]*ManagedHandler
+	Reactors     map[string]*handler.ManagedHandler
+	Watchers     map[string]*handler.ManagedHandler
 	EventCh      chan event.Event
 	CloseTimeout time.Duration
 	DoneCh       chan struct{}
@@ -85,8 +58,8 @@ type Service struct {
 
 func NewService() *Service {
 	return &Service{
-		Reactors:     make(map[string]*ManagedHandler),
-		Watchers:     make(map[string]*ManagedHandler),
+		Reactors:     make(map[string]*handler.ManagedHandler),
+		Watchers:     make(map[string]*handler.ManagedHandler),
 		EventCh:      make(chan event.Event),
 		CloseTimeout: 5 * time.Second,
 		DoneCh:       make(chan struct{}),
@@ -201,19 +174,19 @@ func SetupService(name string, cfg config.ServiceConfig) (*Service, error) {
 	service.Name = name
 
 	for actorName, actorCfg := range cfg.Watchers {
-		handler, err := SetupWatcher(actorCfg)
+		handle, err := SetupWatcher(actorCfg)
 		if err != nil {
 			return nil, fmt.Errorf("Service %s, Watcher %s, Setup error: %s", service.Name, actorName, err)
 		}
-		service.Watchers[actorName] = NewManagedHandler(handler)
+		service.Watchers[actorName] = handler.NewManagedHandler(handle)
 	}
 
 	for actorName, actorCfg := range cfg.Reactors {
-		handler, err := SetupReactor(actorCfg)
+		handle, err := SetupReactor(actorCfg)
 		if err != nil {
 			return nil, fmt.Errorf("Service %s, Reactor %s, Setup error: %s", service.Name, actorName, err)
 		}
-		service.Reactors[actorName] = NewManagedHandler(handler)
+		service.Reactors[actorName] = handler.NewManagedHandler(handle)
 	}
 	return service, nil
 }
