@@ -11,23 +11,40 @@ import (
 	"time"
 )
 
-type Service struct {
-	Name         string
-	Reactors     map[string]*ManagedHandler
-	Watchers     map[string]*ManagedHandler
-	EventCh      chan event.Event
-	CloseTimeout time.Duration
-	DoneCh       chan struct{}
+type Receptor struct {
+	Services []*Service
 }
 
-func NewService() *Service {
-	return &Service{
-		Reactors:     make(map[string]*ManagedHandler),
-		Watchers:     make(map[string]*ManagedHandler),
-		EventCh:      make(chan event.Event),
-		CloseTimeout: 5 * time.Second,
-		DoneCh:       make(chan struct{}),
+func NewReceptor() *Receptor {
+	return &Receptor{}
+}
+
+func (r *Receptor) Init(cfg config.Config) error {
+	services, err := Setup(cfg)
+	if err != nil {
+		return err
 	}
+	r.Services = services
+	return nil
+}
+
+func (r *Receptor) Start() {
+	for _, service := range r.Services {
+		service.Start()
+	}
+}
+
+// Stop stops all registered services and blocks until all stopped or reached timeout.
+func (r *Receptor) Stop() {
+	wg := sync.WaitGroup{}
+	wg.Add(len(r.Services))
+	for _, service := range r.Services {
+		go func() {
+			service.Stop()
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
 
 type ManagedHandler struct {
@@ -57,40 +74,23 @@ func (m *ManagedHandler) Stop() {
 	close(m.CloseCh)
 }
 
-type Receptor struct {
-	Services []*Service
+type Service struct {
+	Name         string
+	Reactors     map[string]*ManagedHandler
+	Watchers     map[string]*ManagedHandler
+	EventCh      chan event.Event
+	CloseTimeout time.Duration
+	DoneCh       chan struct{}
 }
 
-func NewReceptor() *Receptor {
-	return &Receptor{}
-}
-
-func (r *Receptor) Init(cfg config.Config) error {
-	services, err := r.SetupByConfig(cfg)
-	if err != nil {
-		return err
+func NewService() *Service {
+	return &Service{
+		Reactors:     make(map[string]*ManagedHandler),
+		Watchers:     make(map[string]*ManagedHandler),
+		EventCh:      make(chan event.Event),
+		CloseTimeout: 5 * time.Second,
+		DoneCh:       make(chan struct{}),
 	}
-	r.Services = services
-	return nil
-}
-
-func (r *Receptor) Start() {
-	for _, service := range r.Services {
-		service.Start()
-	}
-}
-
-// Stop stops all registered services and blocks until all stopped or reached timeout.
-func (r *Receptor) Stop() {
-	wg := sync.WaitGroup{}
-	wg.Add(len(r.Services))
-	for _, service := range r.Services {
-		go func() {
-			service.Stop()
-			wg.Done()
-		}()
-	}
-	wg.Wait()
 }
 
 // Start starts the service.
@@ -141,8 +141,9 @@ func (s *Service) Stop() {
 	close(s.DoneCh)
 }
 
-func (r *Receptor) SetupByConfig(cfg config.Config) ([]*Service, error) {
-	err := SetupDefaultConfig(cfg)
+// Setup sets up all services defined by config.
+func Setup(cfg config.Config) ([]*Service, error) {
+	err := SetupGlobalConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -155,65 +156,8 @@ func (r *Receptor) SetupByConfig(cfg config.Config) ([]*Service, error) {
 	return services, nil
 }
 
-func SetupServices(serviceCfgs map[string]config.ServiceConfig) ([]*Service, error) {
-	var services []*Service
-	for serviceName, serviceCfg := range serviceCfgs {
-		service, err := SetupService(serviceName, serviceCfg)
-		if err != nil {
-			return nil, fmt.Errorf("Could not setup service %s: %s", serviceName, err)
-		}
-		services = append(services, service)
-	}
-	return services, nil
-}
-
-func SetupService(name string, cfg config.ServiceConfig) (*Service, error) {
-	service := NewService()
-	service.Name = name
-
-	for actorName, actorCfg := range cfg.Watchers {
-		handler, err := SetupWatcher(actorCfg)
-		if err != nil {
-			return nil, fmt.Errorf("Service %s, Watcher %s, Setup error: %s", service.Name, actorName, err)
-		}
-		service.Watchers[actorName] = NewManagedHandler(handler)
-	}
-
-	for actorName, actorCfg := range cfg.Reactors {
-		handler, err := SetupReactor(actorCfg)
-		if err != nil {
-			return nil, fmt.Errorf("Service %s, Reactor %s, Setup error: %s", service.Name, actorName, err)
-		}
-		service.Reactors[actorName] = NewManagedHandler(handler)
-	}
-	return service, nil
-}
-
-func SetupWatcher(cfg config.ActorConfig) (handler.Handler, error) {
-	watcher, ok := discovery.Watchers[cfg.Type]
-	if !ok {
-		return nil, fmt.Errorf("Could not setup watcher %s, watcher type not found", cfg.Type)
-	}
-	handler, err := watcher.Accept(cfg.Config)
-	if err != nil {
-		return nil, fmt.Errorf("Could not setup watcher %s, watcher did not accept service config: %s", cfg.Type, err)
-	}
-	return handler, nil
-}
-
-func SetupReactor(cfg config.ActorConfig) (handler.Handler, error) {
-	react, ok := reactor.Reactors[cfg.Type]
-	if !ok {
-		return nil, fmt.Errorf("Could not setup reactor %s, reactor type not found", cfg.Type)
-	}
-	handler, err := react.Accept(cfg.Config)
-	if err != nil {
-		return nil, fmt.Errorf("Could not setup reactor %s, reactor did not accept service config: %s", cfg.Type, err)
-	}
-	return handler, nil
-}
-
-func SetupDefaultConfig(cfg config.Config) error {
+// SetupGlobalConfig configures watchers and reactors with their global config.
+func SetupGlobalConfig(cfg config.Config) error {
 	for reactName, reactCfg := range cfg.Reactors {
 		react, ok := reactor.Reactors[reactName]
 		if !ok {
@@ -236,4 +180,66 @@ func SetupDefaultConfig(cfg config.Config) error {
 		}
 	}
 	return nil
+}
+
+// SetupServices sets up multiple services and their components defined by their service config.
+func SetupServices(serviceCfgs map[string]config.ServiceConfig) ([]*Service, error) {
+	var services []*Service
+	for serviceName, serviceCfg := range serviceCfgs {
+		service, err := SetupService(serviceName, serviceCfg)
+		if err != nil {
+			return nil, fmt.Errorf("Could not setup service %s: %s", serviceName, err)
+		}
+		services = append(services, service)
+	}
+	return services, nil
+}
+
+// SetupService sets up all watchers and reactors of the service with their service specific configuration.
+func SetupService(name string, cfg config.ServiceConfig) (*Service, error) {
+	service := NewService()
+	service.Name = name
+
+	for actorName, actorCfg := range cfg.Watchers {
+		handler, err := SetupWatcher(actorCfg)
+		if err != nil {
+			return nil, fmt.Errorf("Service %s, Watcher %s, Setup error: %s", service.Name, actorName, err)
+		}
+		service.Watchers[actorName] = NewManagedHandler(handler)
+	}
+
+	for actorName, actorCfg := range cfg.Reactors {
+		handler, err := SetupReactor(actorCfg)
+		if err != nil {
+			return nil, fmt.Errorf("Service %s, Reactor %s, Setup error: %s", service.Name, actorName, err)
+		}
+		service.Reactors[actorName] = NewManagedHandler(handler)
+	}
+	return service, nil
+}
+
+// SetupWatcher registers a watcher with the service specific config.
+func SetupWatcher(cfg config.ActorConfig) (handler.Handler, error) {
+	watcher, ok := discovery.Watchers[cfg.Type]
+	if !ok {
+		return nil, fmt.Errorf("Could not setup watcher %s, watcher type not found", cfg.Type)
+	}
+	handler, err := watcher.Accept(cfg.Config)
+	if err != nil {
+		return nil, fmt.Errorf("Could not setup watcher %s, watcher did not accept service config: %s", cfg.Type, err)
+	}
+	return handler, nil
+}
+
+// SetupReactor registers a reactor with the service specific config.
+func SetupReactor(cfg config.ActorConfig) (handler.Handler, error) {
+	react, ok := reactor.Reactors[cfg.Type]
+	if !ok {
+		return nil, fmt.Errorf("Could not setup reactor %s, reactor type not found", cfg.Type)
+	}
+	handler, err := react.Accept(cfg.Config)
+	if err != nil {
+		return nil, fmt.Errorf("Could not setup reactor %s, reactor did not accept service config: %s", cfg.Type, err)
+	}
+	return handler, nil
 }
