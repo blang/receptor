@@ -97,19 +97,13 @@ func (s *Service) Start() {
 func (s *Service) Stop() {
 	close(s.EventCh)
 	for _, manWatcher := range s.Watchers {
-		select {
-		case <-manWatcher.DoneCh:
-		case <-time.After(s.CloseTimeout):
-			//TODO: Handle timeout, error message
-		}
+		manWatcher.Stop()
+		manWatcher.WaitTimeout(s.CloseTimeout) // TODO: Handle timeout error
 	}
 
 	for _, manReactor := range s.Reactors {
-		select {
-		case <-manReactor.DoneCh:
-		case <-time.After(s.CloseTimeout):
-			//TODO: Handle timeout, error message
-		}
+		manReactor.Stop()
+		manReactor.WaitTimeout(s.CloseTimeout) // TODO: Handle timeout error
 	}
 	close(s.DoneCh)
 }
