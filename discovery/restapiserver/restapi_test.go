@@ -35,7 +35,7 @@ func TestFunc(t *testing.T) {
 	}
 
 	handle, err := watcher.Accept(json.RawMessage(b))
-	manHandle := pipeline.NewManagedHandler(handle)
+	manHandle := pipeline.NewManagedEndpoint(handle)
 	if err != nil {
 		t.Fatalf("Watcher accept failed: %s", err)
 	}

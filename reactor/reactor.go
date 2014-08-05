@@ -9,5 +9,5 @@ var Reactors = make(map[string]Reactor)
 
 type Reactor interface {
 	Setup(json.RawMessage) error
-	Accept(json.RawMessage) (pipeline.Handler, error)
+	Accept(json.RawMessage) (pipeline.Endpoint, error)
 }

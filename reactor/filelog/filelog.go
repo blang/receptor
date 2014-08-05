@@ -21,7 +21,7 @@ func (r *FileLogReactor) Setup(_ json.RawMessage) error {
 	// No global config needed
 	return nil
 }
-func (r *FileLogReactor) Accept(cfgData json.RawMessage) (pipeline.Handler, error) {
+func (r *FileLogReactor) Accept(cfgData json.RawMessage) (pipeline.Endpoint, error) {
 	var cfg ServiceConfig
 	err := json.Unmarshal(cfgData, &cfg)
 	if err != nil {

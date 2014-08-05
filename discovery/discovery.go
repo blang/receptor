@@ -13,5 +13,5 @@ type Watcher interface {
 	Setup(json.RawMessage) error
 
 	// Handle job and return a handler to start watching
-	Accept(json.RawMessage) (pipeline.Handler, error)
+	Accept(json.RawMessage) (pipeline.Endpoint, error)
 }

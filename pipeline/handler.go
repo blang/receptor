@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type Handler interface {
+type Endpoint interface {
 	// Started in seperate go routine
 	Handle(eventCh chan Event, closeCh chan struct{})
 }
@@ -17,42 +17,42 @@ func (f HandlerFunc) Handle(eventCh chan Event, closeCh chan struct{}) {
 }
 
 // ManagedHandler wraps a Handler to control its shutdown behaviour.
-type ManagedHandler struct {
-	Handler Handler
-	DoneCh  chan struct{}
-	CloseCh chan struct{}
+type ManagedEndpoint struct {
+	Endpoint Endpoint
+	DoneCh   chan struct{}
+	CloseCh  chan struct{}
 }
 
 var ERROR_HANDLER_WAIT_TIMEOUT = errors.New("Handler wait timed out")
 
 // NewManagedHandler creates a wrapper around an handler which manages the shutdown behaviour.
-func NewManagedHandler(handle Handler) *ManagedHandler {
-	return &ManagedHandler{
-		Handler: handle,
-		DoneCh:  make(chan struct{}),
-		CloseCh: make(chan struct{}),
+func NewManagedEndpoint(handle Endpoint) *ManagedEndpoint {
+	return &ManagedEndpoint{
+		Endpoint: handle,
+		DoneCh:   make(chan struct{}),
+		CloseCh:  make(chan struct{}),
 	}
 }
 
 // Handle starts the wrapped handler on the given eventChannel and closes the DoneCh if handler returns.
 // Blocks until handler returns.
-func (m *ManagedHandler) Handle(eventCh chan Event) {
-	m.Handler.Handle(eventCh, m.CloseCh)
+func (m *ManagedEndpoint) Handle(eventCh chan Event) {
+	m.Endpoint.Handle(eventCh, m.CloseCh)
 	close(m.DoneCh)
 }
 
 // Stop signals the handler to exit by using its close channel, stop will not close the event channel.
-func (m *ManagedHandler) Stop() {
+func (m *ManagedEndpoint) Stop() {
 	close(m.CloseCh)
 }
 
 // Wait waits for the handler to stop.
-func (m *ManagedHandler) Wait() {
+func (m *ManagedEndpoint) Wait() {
 	<-m.DoneCh
 }
 
 // WaitTimeout waits for the handler to stop or timeout to occur.
-func (m *ManagedHandler) WaitTimeout(timeout time.Duration) error {
+func (m *ManagedEndpoint) WaitTimeout(timeout time.Duration) error {
 	select {
 	case <-m.DoneCh:
 		return nil

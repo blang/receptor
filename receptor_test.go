@@ -22,7 +22,7 @@ func (w *testWatcher) Setup(json.RawMessage) error {
 	return nil
 }
 
-func (w *testWatcher) Accept(json.RawMessage) (pipeline.Handler, error) {
+func (w *testWatcher) Accept(json.RawMessage) (pipeline.Endpoint, error) {
 	w.acceptCalled = true
 	return pipeline.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 		for i := 0; i < 100; i++ {
@@ -45,7 +45,7 @@ func (r *testReactor) Setup(json.RawMessage) error {
 	r.setupCalled = true
 	return nil
 }
-func (r *testReactor) Accept(json.RawMessage) (pipeline.Handler, error) {
+func (r *testReactor) Accept(json.RawMessage) (pipeline.Endpoint, error) {
 	r.acceptCalled = true
 	return pipeline.HandlerFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
 		for e := range eventCh {

@@ -39,7 +39,7 @@ func TestFunc(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Does not accept config: %s\n", err)
 	}
-	manHandle := pipeline.NewManagedHandler(handle)
+	manHandle := pipeline.NewManagedEndpoint(handle)
 
 	eventCh := make(chan pipeline.Event)
 	go manHandle.Handle(eventCh)

@@ -48,7 +48,7 @@ type RestEvent struct {
 	Port int    `json:"port"`
 }
 
-func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (pipeline.Handler, error) {
+func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (pipeline.Endpoint, error) {
 	conf := ServiceConfig{
 		Service: "default",
 	}

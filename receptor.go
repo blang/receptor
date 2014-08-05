@@ -48,8 +48,8 @@ func (r *Receptor) Stop() {
 
 type Service struct {
 	Name         string
-	Reactors     map[string]*pipeline.ManagedHandler
-	Watchers     map[string]*pipeline.ManagedHandler
+	Reactors     map[string]*pipeline.ManagedEndpoint
+	Watchers     map[string]*pipeline.ManagedEndpoint
 	EventCh      chan pipeline.Event
 	CloseTimeout time.Duration
 	DoneCh       chan struct{}
@@ -57,8 +57,8 @@ type Service struct {
 
 func NewService() *Service {
 	return &Service{
-		Reactors:     make(map[string]*pipeline.ManagedHandler),
-		Watchers:     make(map[string]*pipeline.ManagedHandler),
+		Reactors:     make(map[string]*pipeline.ManagedEndpoint),
+		Watchers:     make(map[string]*pipeline.ManagedEndpoint),
 		EventCh:      make(chan pipeline.Event),
 		CloseTimeout: 5 * time.Second,
 		DoneCh:       make(chan struct{}),
@@ -171,7 +171,7 @@ func SetupService(name string, cfg config.ServiceConfig) (*Service, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Service %s, Watcher %s, Setup error: %s", service.Name, actorName, err)
 		}
-		service.Watchers[actorName] = pipeline.NewManagedHandler(handle)
+		service.Watchers[actorName] = pipeline.NewManagedEndpoint(handle)
 	}
 
 	for actorName, actorCfg := range cfg.Reactors {
@@ -179,13 +179,13 @@ func SetupService(name string, cfg config.ServiceConfig) (*Service, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Service %s, Reactor %s, Setup error: %s", service.Name, actorName, err)
 		}
-		service.Reactors[actorName] = pipeline.NewManagedHandler(handle)
+		service.Reactors[actorName] = pipeline.NewManagedEndpoint(handle)
 	}
 	return service, nil
 }
 
 // SetupWatcher registers a watcher with the service specific config.
-func SetupWatcher(cfg config.ActorConfig) (pipeline.Handler, error) {
+func SetupWatcher(cfg config.ActorConfig) (pipeline.Endpoint, error) {
 	watcher, ok := discovery.Watchers[cfg.Type]
 	if !ok {
 		return nil, fmt.Errorf("Could not setup watcher %s, watcher type not found", cfg.Type)
@@ -198,7 +198,7 @@ func SetupWatcher(cfg config.ActorConfig) (pipeline.Handler, error) {
 }
 
 // SetupReactor registers a reactor with the service specific config.
-func SetupReactor(cfg config.ActorConfig) (pipeline.Handler, error) {
+func SetupReactor(cfg config.ActorConfig) (pipeline.Endpoint, error) {
 	react, ok := reactor.Reactors[cfg.Type]
 	if !ok {
 		return nil, fmt.Errorf("Could not setup reactor %s, reactor type not found", cfg.Type)
