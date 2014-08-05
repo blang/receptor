@@ -52,6 +52,7 @@ func (m *ManagedHandler) Wait() {
 	<-m.DoneCh
 }
 
+// WaitTimeout waits for the handler to stop or timeout to occur.
 func (m *ManagedHandler) WaitTimeout(timeout time.Duration) error {
 	select {
 	case <-m.DoneCh:
