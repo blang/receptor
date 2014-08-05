@@ -33,18 +33,28 @@ func NewService() *Service {
 type ManagedHandler struct {
 	Handler handler.Handler
 	DoneCh  chan struct{}
+	CloseCh chan struct{}
 }
 
+// NewManagedHandler creates a wrapper around an handler which manages the shutdown behaviour.
 func NewManagedHandler(handle handler.Handler) *ManagedHandler {
 	return &ManagedHandler{
 		Handler: handle,
 		DoneCh:  make(chan struct{}),
+		CloseCh: make(chan struct{}),
 	}
 }
 
-func (m *ManagedHandler) Handle(eventCh chan event.Event, closeCh chan struct{}) {
-	m.Handler.Handle(eventCh, closeCh)
+// Handle starts the wrapped handler on the given eventChannel and closes the DoneCh if handler returns.
+// Blocks until handler returns.
+func (m *ManagedHandler) Handle(eventCh chan event.Event) {
+	m.Handler.Handle(eventCh, m.CloseCh)
 	close(m.DoneCh)
+}
+
+// Stop signals the handler to exit.
+func (m *ManagedHandler) Stop() {
+	close(m.CloseCh)
 }
 
 type Receptor struct {
@@ -64,30 +74,9 @@ func (r *Receptor) Init(cfg config.Config) error {
 	return nil
 }
 
-func (r *Receptor) Run() {
-
+func (r *Receptor) Start() {
 	for _, service := range r.Services {
-		var outChs []chan event.Event
-
-		// Start Reactors
-		for _, reactorHandler := range service.Reactors {
-			outCh := make(chan event.Event)
-			outChs = append(outChs, outCh)
-
-			// Add Congestion control before each reactor
-			controlledOutCh := event.Merger(outCh)
-
-			go reactorHandler.Handle(controlledOutCh, service.DoneCh)
-		}
-
-		// Broadcast from EventCh to all outChs
-		event.Broadcaster(service.EventCh, outChs)
-
-		// Start Watchers
-		for _, watchHandler := range service.Watchers {
-			go watchHandler.Handle(service.EventCh, service.DoneCh)
-		}
-
+		service.Start()
 	}
 }
 
@@ -104,6 +93,31 @@ func (r *Receptor) Stop() {
 	wg.Wait()
 }
 
+// Start starts the service.
+// It creates a pipeline between all watchers and reactors and starts them.
+func (s *Service) Start() {
+	var outChs []chan event.Event
+
+	// Start Reactors
+	for _, reactorManHandler := range s.Reactors {
+		outCh := make(chan event.Event)
+		outChs = append(outChs, outCh)
+
+		// Add Congestion control before each reactor
+		controlledOutCh := event.Merger(outCh)
+
+		go reactorManHandler.Handle(controlledOutCh)
+	}
+
+	// Broadcast from EventCh to all outChs
+	event.Broadcaster(s.EventCh, outChs)
+
+	// Start Watchers
+	for _, watchManHandler := range s.Watchers {
+		go watchManHandler.Handle(s.EventCh)
+	}
+}
+
 // Stop stops the service and all its watchers and reactors.
 // Blocks until all components are stopped or reach timeout.
 // Closes service doneCh channel.
@@ -114,7 +128,6 @@ func (s *Service) Stop() {
 		case <-manWatcher.DoneCh:
 		case <-time.After(s.CloseTimeout):
 			//TODO: Handle timeout, error message
-
 		}
 	}
 
@@ -123,7 +136,6 @@ func (s *Service) Stop() {
 		case <-manReactor.DoneCh:
 		case <-time.After(s.CloseTimeout):
 			//TODO: Handle timeout, error message
-
 		}
 	}
 	close(s.DoneCh)
