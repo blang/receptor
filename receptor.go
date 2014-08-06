@@ -84,17 +84,22 @@ func (s *Service) Start() {
 	// Broadcast from EventCh to all outChs
 	pipeline.Broadcaster(s.EventCh, outChs)
 
+	forwarder := pipeline.NewForwarder(s.EventCh)
 	// Start Watchers
 	for _, watchManHandler := range s.Watchers {
-		go watchManHandler.Handle(s.EventCh)
+		watcherEventCh := make(chan pipeline.Event)
+		forwarder.Forward(watcherEventCh)
+
+		go watchManHandler.Handle(watcherEventCh)
 	}
+	forwarder.WaitClose()
+
 }
 
 // Stop stops the service and all its watchers and reactors.
 // Blocks until all components are stopped or reach timeout.
 // Closes service doneCh channel.
 func (s *Service) Stop() {
-	close(s.EventCh)
 	for _, manWatcher := range s.Watchers {
 		manWatcher.Stop()
 		manWatcher.WaitTimeout(s.CloseTimeout) // TODO: Handle timeout error

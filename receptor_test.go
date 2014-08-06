@@ -31,6 +31,7 @@ func (w *testWatcher) Accept(json.RawMessage) (pipeline.Endpoint, error) {
 				EType: pipeline.EventNodeUp,
 			}
 		}
+		close(eventCh)
 	}), nil
 }
 
@@ -108,7 +109,7 @@ func TestSystem(t *testing.T) {
 				receptor.Stop()
 			}
 		case <-timeout:
-			t.Error("Timeout")
+			t.Errorf("Timeout, events received: %d\n", count)
 			return
 		}
 	}

@@ -1,5 +1,9 @@
 package pipeline
 
+import (
+	"sync"
+)
+
 // EventMerger merges incoming events from inCh if sink could not keep up
 func Merger(inCh chan Event) (eventCh chan Event) {
 	outCh := make(chan Event)
@@ -40,5 +44,37 @@ func Broadcaster(inCh chan Event, outChs []chan Event) {
 		for _, outCh := range outChs {
 			close(outCh)
 		}
+	}()
+}
+
+type Forwarder struct {
+	wg    sync.WaitGroup
+	outCh chan Event
+}
+
+// NewForwarder creates a new forwarder for given output channel.
+func NewForwarder(outCh chan Event) *Forwarder {
+	return &Forwarder{
+		outCh: outCh,
+	}
+}
+
+// Forwards the given inChannel to output channel.
+func (f *Forwarder) Forward(inCh chan Event) {
+	f.wg.Add(1)
+	go func() {
+		for event := range inCh {
+			f.outCh <- event
+		}
+		f.wg.Done()
+	}()
+}
+
+// WaitClose waits until all forwarded input channels are closed and closes output channel.
+// Does not block.
+func (f *Forwarder) WaitClose() {
+	go func() {
+		f.wg.Wait()
+		close(f.outCh)
 	}()
 }

@@ -96,9 +96,7 @@ func TestBroadcaster(t *testing.T) {
 	inCh := make(chan Event)
 	outCh1 := make(chan Event)
 	outCh2 := make(chan Event)
-	event := Event(&SingleNode{
-		EName: "Test1",
-	})
+	event := Event(&SingleNode{EName: "Test1"})
 	Broadcaster(inCh, []chan Event{outCh1, outCh2})
 	inCh <- event
 	e1 := <-outCh1
@@ -128,4 +126,46 @@ func isChannelClosed(ch chan Event) bool {
 		}
 	}
 	return false
+}
+
+func TestForwarder(t *testing.T) {
+	outCh := make(chan Event)
+	inCh1 := make(chan Event)
+	inCh2 := make(chan Event)
+	f := NewForwarder(outCh)
+
+	f.Forward(inCh1)
+	f.Forward(inCh2)
+	f.WaitClose()
+
+	inCh1 <- &SingleNode{EName: "Test1"}
+	inCh2 <- &SingleNode{EName: "Test2"}
+
+	select {
+	case <-outCh:
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout: Could not receive on output channel")
+	}
+
+	select {
+	case <-outCh:
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout: Could not receive on output channel")
+	}
+
+	close(inCh1)
+
+	// Test if pipeline works after one forwarder turns down
+	inCh2 <- &SingleNode{EName: "Test3"}
+
+	select {
+	case <-outCh:
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout: Could not receive on output channel")
+	}
+
+	close(inCh2)
+	if !isChannelClosed(outCh) {
+		t.Errorf("Channel should be closed")
+	}
 }
