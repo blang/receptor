@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+var SERVICE_STOP_TIMEOUT = 5 * time.Second
+
 type Receptor struct {
 	Services []*Service
 }
@@ -38,77 +40,11 @@ func (r *Receptor) Stop() {
 	wg.Add(len(r.Services))
 	for _, service := range r.Services {
 		go func() {
-			service.Stop()
+			service.Stop(SERVICE_STOP_TIMEOUT)
 			wg.Done()
 		}()
 	}
 	wg.Wait()
-}
-
-type Service struct {
-	Name         string
-	Reactors     map[string]*pipeline.ManagedEndpoint
-	Watchers     map[string]*pipeline.ManagedEndpoint
-	EventCh      chan pipeline.Event
-	CloseTimeout time.Duration
-	DoneCh       chan struct{}
-}
-
-func NewService() *Service {
-	return &Service{
-		Reactors:     make(map[string]*pipeline.ManagedEndpoint),
-		Watchers:     make(map[string]*pipeline.ManagedEndpoint),
-		EventCh:      make(chan pipeline.Event),
-		CloseTimeout: 5 * time.Second,
-		DoneCh:       make(chan struct{}),
-	}
-}
-
-// Start starts the service.
-// It creates a pipeline between all watchers and reactors and starts them, does not block.
-func (s *Service) Start() {
-	var outChs []chan pipeline.Event
-
-	// Start Reactors
-	for _, reactorManHandler := range s.Reactors {
-		outCh := make(chan pipeline.Event)
-		outChs = append(outChs, outCh)
-
-		// Add Congestion control before each reactor
-		controlledOutCh := pipeline.Merger(outCh)
-
-		go reactorManHandler.Handle(controlledOutCh)
-	}
-
-	// Broadcast from EventCh to all outChs
-	pipeline.Broadcaster(s.EventCh, outChs)
-
-	forwarder := pipeline.NewForwarder(s.EventCh)
-	// Start Watchers
-	for _, watchManHandler := range s.Watchers {
-		watcherEventCh := make(chan pipeline.Event)
-		forwarder.Forward(watcherEventCh)
-
-		go watchManHandler.Handle(watcherEventCh)
-	}
-	forwarder.WaitClose()
-
-}
-
-// Stop stops the service and all its watchers and reactors.
-// Blocks until all components are stopped or reach timeout.
-// Closes service doneCh channel.
-func (s *Service) Stop() {
-	for _, manWatcher := range s.Watchers {
-		manWatcher.Stop()
-		manWatcher.WaitTimeout(s.CloseTimeout) // TODO: Handle timeout error
-	}
-
-	for _, manReactor := range s.Reactors {
-		manReactor.Stop()
-		manReactor.WaitTimeout(s.CloseTimeout) // TODO: Handle timeout error
-	}
-	close(s.DoneCh)
 }
 
 // Setup sets up all services defined by config.
@@ -167,15 +103,14 @@ func SetupServices(serviceCfgs map[string]ServiceConfig) ([]*Service, error) {
 
 // SetupService sets up all watchers and reactors of the service with their service specific configuration.
 func SetupService(name string, cfg ServiceConfig) (*Service, error) {
-	service := NewService()
-	service.Name = name
+	service := NewService(name)
 
 	for actorName, actorCfg := range cfg.Watchers {
 		handle, err := SetupWatcher(actorCfg)
 		if err != nil {
 			return nil, fmt.Errorf("Service %s, Watcher %s, Setup error: %s", service.Name, actorName, err)
 		}
-		service.Watchers[actorName] = pipeline.NewManagedEndpoint(handle)
+		service.AddWatcherEndpoint(actorName, pipeline.NewManagedEndpoint(handle))
 	}
 
 	for actorName, actorCfg := range cfg.Reactors {
@@ -183,7 +118,7 @@ func SetupService(name string, cfg ServiceConfig) (*Service, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Service %s, Reactor %s, Setup error: %s", service.Name, actorName, err)
 		}
-		service.Reactors[actorName] = pipeline.NewManagedEndpoint(handle)
+		service.AddReactorEndpoint(actorName, pipeline.NewManagedEndpoint(handle))
 	}
 	return service, nil
 }
