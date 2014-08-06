@@ -1,4 +1,4 @@
-package config
+package receptor
 
 // TODO: Move to receptor package
 
@@ -24,7 +24,7 @@ type Config struct {
 	Reactors map[string]json.RawMessage `json:"reactors"`
 }
 
-func ReadFromFile(filename string) (*Config, error) {
+func NewConfigFromFile(filename string) (*Config, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err

@@ -2,7 +2,6 @@ package receptor
 
 import (
 	"fmt"
-	"github.com/blang/receptor/config"
 	"github.com/blang/receptor/discovery"
 	"github.com/blang/receptor/pipeline"
 	"github.com/blang/receptor/reactor"
@@ -18,7 +17,7 @@ func NewReceptor() *Receptor {
 	return &Receptor{}
 }
 
-func (r *Receptor) Init(cfg *config.Config) error {
+func (r *Receptor) Init(cfg *Config) error {
 	services, err := Setup(cfg)
 	if err != nil {
 		return err
@@ -113,7 +112,7 @@ func (s *Service) Stop() {
 }
 
 // Setup sets up all services defined by config.
-func Setup(cfg *config.Config) ([]*Service, error) {
+func Setup(cfg *Config) ([]*Service, error) {
 	err := SetupGlobalConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -128,7 +127,7 @@ func Setup(cfg *config.Config) ([]*Service, error) {
 }
 
 // SetupGlobalConfig configures watchers and reactors with their global config.
-func SetupGlobalConfig(cfg *config.Config) error {
+func SetupGlobalConfig(cfg *Config) error {
 	for reactName, reactCfg := range cfg.Reactors {
 		react, ok := reactor.Reactors[reactName]
 		if !ok {
@@ -154,7 +153,7 @@ func SetupGlobalConfig(cfg *config.Config) error {
 }
 
 // SetupServices sets up multiple services and their components defined by their service config.
-func SetupServices(serviceCfgs map[string]config.ServiceConfig) ([]*Service, error) {
+func SetupServices(serviceCfgs map[string]ServiceConfig) ([]*Service, error) {
 	var services []*Service
 	for serviceName, serviceCfg := range serviceCfgs {
 		service, err := SetupService(serviceName, serviceCfg)
@@ -167,7 +166,7 @@ func SetupServices(serviceCfgs map[string]config.ServiceConfig) ([]*Service, err
 }
 
 // SetupService sets up all watchers and reactors of the service with their service specific configuration.
-func SetupService(name string, cfg config.ServiceConfig) (*Service, error) {
+func SetupService(name string, cfg ServiceConfig) (*Service, error) {
 	service := NewService()
 	service.Name = name
 
@@ -190,7 +189,7 @@ func SetupService(name string, cfg config.ServiceConfig) (*Service, error) {
 }
 
 // SetupWatcher registers a watcher with the service specific config.
-func SetupWatcher(cfg config.ActorConfig) (pipeline.Endpoint, error) {
+func SetupWatcher(cfg ActorConfig) (pipeline.Endpoint, error) {
 	watcher, ok := discovery.Watchers[cfg.Type]
 	if !ok {
 		return nil, fmt.Errorf("Could not setup watcher %s, watcher type not found", cfg.Type)
@@ -203,7 +202,7 @@ func SetupWatcher(cfg config.ActorConfig) (pipeline.Endpoint, error) {
 }
 
 // SetupReactor registers a reactor with the service specific config.
-func SetupReactor(cfg config.ActorConfig) (pipeline.Endpoint, error) {
+func SetupReactor(cfg ActorConfig) (pipeline.Endpoint, error) {
 	react, ok := reactor.Reactors[cfg.Type]
 	if !ok {
 		return nil, fmt.Errorf("Could not setup reactor %s, reactor type not found", cfg.Type)

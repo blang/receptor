@@ -2,7 +2,6 @@ package receptor
 
 import (
 	"encoding/json"
-	"github.com/blang/receptor/config"
 	"github.com/blang/receptor/discovery"
 	"github.com/blang/receptor/pipeline"
 	"github.com/blang/receptor/reactor"
@@ -66,21 +65,21 @@ func TestSystem(t *testing.T) {
 	reactor.Reactors["testReactor"] = react
 
 	//config
-	serviceConfig := config.ServiceConfig{
-		Watchers: make(map[string]config.ActorConfig),
-		Reactors: make(map[string]config.ActorConfig),
+	serviceConfig := ServiceConfig{
+		Watchers: make(map[string]ActorConfig),
+		Reactors: make(map[string]ActorConfig),
 	}
-	serviceConfig.Watchers["testWatcher1"] = config.ActorConfig{
+	serviceConfig.Watchers["testWatcher1"] = ActorConfig{
 		Type:   "testWatcher",
 		Config: nil,
 	}
-	serviceConfig.Reactors["testReactor1"] = config.ActorConfig{
+	serviceConfig.Reactors["testReactor1"] = ActorConfig{
 		Type:   "testReactor",
 		Config: nil,
 	}
 
-	cfg := &config.Config{
-		Services: make(map[string]config.ServiceConfig),
+	cfg := &Config{
+		Services: make(map[string]ServiceConfig),
 		Watchers: make(map[string]json.RawMessage),
 		Reactors: make(map[string]json.RawMessage),
 	}

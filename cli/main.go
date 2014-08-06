@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/blang/receptor"
-	"github.com/blang/receptor/config"
 	"github.com/blang/receptor/discovery"
 	_ "github.com/blang/receptor/plugins"
 	"github.com/blang/receptor/reactor"
@@ -22,7 +21,7 @@ func main() {
 	log.Printf("Available watchers: [%s]\n", availableWatchers())
 	log.Printf("Available reactors: [%s]\n", availableReactors())
 
-	cfg, err := config.ReadFromFile(*cfgFile)
+	cfg, err := NewConfigFromFile(*cfgFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading config file: %s\n", err)
 		os.Exit(1)
