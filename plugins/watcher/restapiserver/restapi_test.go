@@ -3,7 +3,6 @@ package restapiserver
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/blang/receptor/discovery"
 	"github.com/blang/receptor/pipeline"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +11,7 @@ import (
 )
 
 func TestFunc(t *testing.T) {
-	watcher := discovery.Watchers["restapiserver"].(*RestAPIServerWatcher)
+	watcher := &RestAPIServerWatcher{}
 	cfg := &Config{
 		Listen: "127.0.0.1:9991",
 	}

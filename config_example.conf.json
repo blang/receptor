@@ -1,0 +1,29 @@
+{
+  "services": {
+    "MyTestService": {
+      "watchers": {
+        "watcher1": {
+          "type": "restapiserver",
+          "cfg": {
+            "service":"mytestservice"
+          }
+        }
+      },
+      "reactors": {
+        "reactor1": {
+          "type": "filelog",
+          "cfg": {
+            "filename": "/tmp/receptor_events.log",
+            "unbuffered": true
+          }
+        }
+      }
+    }
+  },
+  "watchers": {
+    "restapiserver": {
+      "listen": "127.0.0.1:8001"
+    }
+  },
+  "reactors": {}
+}

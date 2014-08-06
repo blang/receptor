@@ -3,7 +3,6 @@ package restapiserver
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/blang/receptor/discovery"
 	"github.com/blang/receptor/pipeline"
 	"net/http"
 )
@@ -22,10 +21,6 @@ type Config struct {
 
 type ServiceConfig struct {
 	Service string `json:"service"`
-}
-
-func init() {
-	discovery.Watchers["restapiserver"] = &RestAPIServerWatcher{}
 }
 
 func (w *RestAPIServerWatcher) Setup(cfgData json.RawMessage) error {

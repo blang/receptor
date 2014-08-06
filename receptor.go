@@ -18,7 +18,7 @@ func NewReceptor() *Receptor {
 	return &Receptor{}
 }
 
-func (r *Receptor) Init(cfg config.Config) error {
+func (r *Receptor) Init(cfg *config.Config) error {
 	services, err := Setup(cfg)
 	if err != nil {
 		return err
@@ -66,7 +66,7 @@ func NewService() *Service {
 }
 
 // Start starts the service.
-// It creates a pipeline between all watchers and reactors and starts them.
+// It creates a pipeline between all watchers and reactors and starts them, does not block.
 func (s *Service) Start() {
 	var outChs []chan pipeline.Event
 
@@ -108,7 +108,7 @@ func (s *Service) Stop() {
 }
 
 // Setup sets up all services defined by config.
-func Setup(cfg config.Config) ([]*Service, error) {
+func Setup(cfg *config.Config) ([]*Service, error) {
 	err := SetupGlobalConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func Setup(cfg config.Config) ([]*Service, error) {
 }
 
 // SetupGlobalConfig configures watchers and reactors with their global config.
-func SetupGlobalConfig(cfg config.Config) error {
+func SetupGlobalConfig(cfg *config.Config) error {
 	for reactName, reactCfg := range cfg.Reactors {
 		react, ok := reactor.Reactors[reactName]
 		if !ok {

@@ -78,7 +78,7 @@ func TestSystem(t *testing.T) {
 		Config: nil,
 	}
 
-	cfg := config.Config{
+	cfg := &config.Config{
 		Services: make(map[string]config.ServiceConfig),
 		Watchers: make(map[string]json.RawMessage),
 		Reactors: make(map[string]json.RawMessage),
