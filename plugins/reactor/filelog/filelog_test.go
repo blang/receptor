@@ -3,7 +3,6 @@ package filelog
 import (
 	"encoding/json"
 	"github.com/blang/receptor/pipeline"
-	"github.com/blang/receptor/reactor"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -13,7 +12,7 @@ import (
 
 func TestFunc(t *testing.T) {
 	filelog := &FileLogReactor{}
-	react := reactor.Reactor(filelog) // Check if conform interface
+	react := pipeline.Reactor(filelog) // Check if conform interface
 
 	err := react.Setup(nil)
 	if err != nil {

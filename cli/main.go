@@ -4,9 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/blang/receptor"
-	"github.com/blang/receptor/discovery"
 	_ "github.com/blang/receptor/plugins"
-	"github.com/blang/receptor/reactor"
 	"log"
 	"os"
 	"os/signal"
@@ -21,7 +19,7 @@ func main() {
 	log.Printf("Available watchers: [%s]\n", availableWatchers())
 	log.Printf("Available reactors: [%s]\n", availableReactors())
 
-	cfg, err := NewConfigFromFile(*cfgFile)
+	cfg, err := receptor.NewConfigFromFile(*cfgFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading config file: %s\n", err)
 		os.Exit(1)
@@ -50,7 +48,7 @@ func main() {
 
 func availableWatchers() string {
 	var names []string
-	for name, _ := range discovery.Watchers {
+	for name, _ := range receptor.Watchers {
 		names = append(names, name)
 	}
 	return strings.Join(names, ", ")
@@ -58,7 +56,7 @@ func availableWatchers() string {
 
 func availableReactors() string {
 	var names []string
-	for name, _ := range reactor.Reactors {
+	for name, _ := range receptor.Reactors {
 		names = append(names, name)
 	}
 	return strings.Join(names, ", ")

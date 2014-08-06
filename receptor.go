@@ -2,11 +2,14 @@ package receptor
 
 import (
 	"fmt"
-	"github.com/blang/receptor/discovery"
 	"github.com/blang/receptor/pipeline"
-	"github.com/blang/receptor/reactor"
 	"sync"
 	"time"
+)
+
+var (
+	Watchers = make(map[string]pipeline.Watcher)
+	Reactors = make(map[string]pipeline.Reactor)
 )
 
 var SERVICE_STOP_TIMEOUT = 5 * time.Second
@@ -65,7 +68,7 @@ func Setup(cfg *Config) ([]*Service, error) {
 // SetupGlobalConfig configures watchers and reactors with their global config.
 func SetupGlobalConfig(cfg *Config) error {
 	for reactName, reactCfg := range cfg.Reactors {
-		react, ok := reactor.Reactors[reactName]
+		react, ok := Reactors[reactName]
 		if !ok {
 			return fmt.Errorf("Could not configure react %s, react not found", reactName)
 		}
@@ -76,7 +79,7 @@ func SetupGlobalConfig(cfg *Config) error {
 	}
 
 	for watcherName, watcherCfg := range cfg.Watchers {
-		watcher, ok := discovery.Watchers[watcherName]
+		watcher, ok := Watchers[watcherName]
 		if !ok {
 			return fmt.Errorf("Could not configure watcher %s, watcher not found", watcherName)
 		}
@@ -125,7 +128,7 @@ func SetupService(name string, cfg ServiceConfig) (*Service, error) {
 
 // SetupWatcher registers a watcher with the service specific config.
 func SetupWatcher(cfg ActorConfig) (pipeline.Endpoint, error) {
-	watcher, ok := discovery.Watchers[cfg.Type]
+	watcher, ok := Watchers[cfg.Type]
 	if !ok {
 		return nil, fmt.Errorf("Could not setup watcher %s, watcher type not found", cfg.Type)
 	}
@@ -138,7 +141,7 @@ func SetupWatcher(cfg ActorConfig) (pipeline.Endpoint, error) {
 
 // SetupReactor registers a reactor with the service specific config.
 func SetupReactor(cfg ActorConfig) (pipeline.Endpoint, error) {
-	react, ok := reactor.Reactors[cfg.Type]
+	react, ok := Reactors[cfg.Type]
 	if !ok {
 		return nil, fmt.Errorf("Could not setup reactor %s, reactor type not found", cfg.Type)
 	}

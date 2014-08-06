@@ -1,11 +1,8 @@
-package discovery
+package pipeline
 
 import (
 	"encoding/json"
-	"github.com/blang/receptor/pipeline"
 )
-
-var Watchers = make(map[string]Watcher)
 
 type Watcher interface {
 
@@ -13,5 +10,5 @@ type Watcher interface {
 	Setup(json.RawMessage) error
 
 	// Handle job and return a handler to start watching
-	Accept(json.RawMessage) (pipeline.Endpoint, error)
+	Accept(json.RawMessage) (Endpoint, error)
 }

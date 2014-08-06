@@ -2,9 +2,7 @@ package receptor
 
 import (
 	"encoding/json"
-	"github.com/blang/receptor/discovery"
 	"github.com/blang/receptor/pipeline"
-	"github.com/blang/receptor/reactor"
 	"strconv"
 	"testing"
 	"time"
@@ -60,8 +58,8 @@ func TestSystem(t *testing.T) {
 	react := &testReactor{
 		eventRedirect: make(chan pipeline.Event),
 	}
-	discovery.Watchers["testWatcher"] = watcher
-	reactor.Reactors["testReactor"] = react
+	Watchers["testWatcher"] = watcher
+	Reactors["testReactor"] = react
 
 	//config
 	serviceConfig := ServiceConfig{

@@ -3,10 +3,10 @@
 package reactor
 
 import (
+	"github.com/blang/receptor"
 	"github.com/blang/receptor/plugins/reactor/filelog"
-	"github.com/blang/receptor/reactor"
 )
 
 func init() {
-	reactor.Reactors["filelog"] = &filelog.FileLogReactor{}
+	receptor.Reactors["filelog"] = &filelog.FileLogReactor{}
 }
