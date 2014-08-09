@@ -9,6 +9,7 @@ import (
 )
 
 var PULL_INTERVAL = 5 * time.Second
+var RECONNECT_INTERVAL = 2 * time.Second
 
 type Watcher struct {
 }
@@ -34,21 +35,28 @@ func (w *Watcher) Accept(cfgData json.RawMessage) (pipeline.Endpoint, error) {
 		AuthKey: serviceCfg.AuthKey,
 	}
 
-	client, err := serfc.ClientFromConfig(serfConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	return pipeline.EndpointFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+		var client *serfc.RPCClient
+
 		defer func() {
-			client.Close()
+			if client != nil {
+				client.Close()
+			}
 			close(eventCh)
 		}()
+
 		for {
-			select {
-			case <-closeCh:
-				return
-			case <-time.After(PULL_INTERVAL):
+			client, err := serfc.ClientFromConfig(serfConfig)
+			if err != nil {
+				select {
+				case <-closeCh:
+					return
+				case <-time.After(RECONNECT_INTERVAL):
+				}
+				continue // try to connect again
+			}
+
+			for {
 				members, err := client.Members()
 				if err != nil {
 					log.Printf("Error while fetching serf members: %s\n", err)
@@ -62,7 +70,14 @@ func (w *Watcher) Accept(cfgData json.RawMessage) (pipeline.Endpoint, error) {
 						EPort: int(m.Port),
 					}
 				}
+
+				select {
+				case <-closeCh:
+					return
+				case <-time.After(PULL_INTERVAL):
+				}
 			}
+
 		}
 
 	}), nil
