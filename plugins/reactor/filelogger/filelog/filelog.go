@@ -18,7 +18,6 @@ type ServiceConfig struct {
 }
 
 func (r *FileLogReactor) Setup(_ json.RawMessage) error {
-	// No global config needed
 	return nil
 }
 func (r *FileLogReactor) Accept(cfgData json.RawMessage) (pipe.Endpoint, error) {

@@ -8,7 +8,8 @@ import (
 // Test if Merger passes events through one by one if no congestion
 func TestMergerPassThrough(t *testing.T) {
 	inCh := make(chan Event, 1)
-	outCh := Merger(inCh)
+	outCh := make(chan Event)
+	Merger(inCh, outCh)
 	inCh <- NewEventWithNode("Test1", NodeUp, "127.0.0.1", 80)
 
 	e1 := <-outCh
@@ -32,7 +33,8 @@ func TestMergerPassThrough(t *testing.T) {
 
 func TestMergerCongestionMerge(t *testing.T) {
 	inCh := make(chan Event)
-	outCh := Merger(inCh)
+	outCh := make(chan Event)
+	Merger(inCh, outCh)
 	inCh <- NewEventWithNode("Test1", NodeUp, "127.0.0.1", 80)
 	inCh <- NewEventWithNode("Test2", NodeUp, "127.0.0.1", 81)
 	inCh <- NewEventWithNode("Test2", NodeDown, "127.0.0.1", 81) // Newest Event: Node is not up anymore
@@ -107,7 +109,6 @@ func isChannelClosed(ch chan Event) bool {
 		default:
 		}
 	}
-	return false
 }
 
 func TestForwarder(t *testing.T) {

@@ -1,2 +1,5 @@
 receptor
 receptor.conf.json
+build.log
+bin/
+

@@ -2,18 +2,49 @@
   "services": {
     "MyTestService": {
       "watchers": {
-        "watcher1": {
+        "dummywatcher1": {
+          "type": "dummy",
+          "cfg": {
+            "name": "TestNode1",
+            "host": "127.0.0.1",
+            "port": 80
+          }
+        },
+        "dummywatcher2": {
+          "type": "dummy",
+          "cfg": {
+            "name": "TestNode2",
+            "host": "127.0.0.2",
+            "port": 81
+          }
+        },
+        "dummywatcher3": {
+          "type": "dummy",
+          "cfg": {
+            "name": "TestNode3",
+            "host": "127.0.0.3",
+            "port": 83
+          }
+        },
+        "mywatcher": {
           "type": "restapiserver",
           "cfg": {
-            "service":"mytestservice"
+            "service": "service1"
           }
         }
       },
       "reactors": {
         "reactor1": {
-          "type": "filelog",
+          "type": "filelogger",
           "cfg": {
             "filename": "/tmp/receptor_events.log",
+            "unbuffered": true
+          }
+        },
+        "reactor2": {
+          "type": "filelogger",
+          "cfg": {
+            "filename": "/tmp/receptor_events_duplicate.log",
             "unbuffered": true
           }
         }

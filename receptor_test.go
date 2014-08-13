@@ -2,6 +2,7 @@ package receptor
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/blang/receptor/pipe"
 	"strconv"
 	"testing"
@@ -50,13 +51,38 @@ func (r *testReactor) Accept(json.RawMessage) (pipe.Endpoint, error) {
 	}), nil
 }
 
+type testLookup struct {
+	watchers map[string]pipe.Watcher
+	reactors map[string]pipe.Reactor
+}
+
+func (l *testLookup) Watcher(name string) (pipe.Watcher, error) {
+	if w, ok := l.watchers[name]; !ok {
+		return nil, errors.New("Not found")
+	} else {
+		return w, nil
+	}
+}
+
+func (l *testLookup) Reactor(name string) (pipe.Reactor, error) {
+	if r, ok := l.reactors[name]; !ok {
+		return nil, errors.New("Not found")
+	} else {
+		return r, nil
+	}
+}
+
+func (l *testLookup) Cleanup(_ time.Duration) {}
+
 func TestSystem(t *testing.T) {
 	watcher := &testWatcher{}
 	react := &testReactor{
 		eventRedirect: make(chan pipe.Event),
 	}
-	Watchers["testWatcher"] = watcher
-	Reactors["testReactor"] = react
+	lookup := &testLookup{
+		watchers: map[string]pipe.Watcher{"testWatcher": watcher},
+		reactors: map[string]pipe.Reactor{"testReactor": react},
+	}
 
 	//config
 	serviceConfig := ServiceConfig{
@@ -81,7 +107,7 @@ func TestSystem(t *testing.T) {
 	cfg.Watchers["testWatcher"] = nil
 	cfg.Reactors["testReactor"] = nil
 	cfg.Services["testService"] = serviceConfig
-	receptor := NewReceptor()
+	receptor := NewReceptor(lookup)
 	err := receptor.Init(cfg)
 	if err != nil {
 		t.Fatalf("Init returned error: %s", err)

@@ -43,7 +43,8 @@ func (s *Service) Start() {
 		outChs = append(outChs, outCh)
 
 		// Add Congestion control before each reactor
-		controlledOutCh := pipe.Merger(outCh)
+		controlledOutCh := make(chan pipe.Event)
+		pipe.Merger(outCh, controlledOutCh)
 
 		go reactorManHandler.Handle(controlledOutCh)
 	}
@@ -73,11 +74,11 @@ func (s *Service) Start() {
 func (s *Service) Stop(timeout time.Duration) {
 	for _, manWatcher := range s.watchers {
 		manWatcher.Stop()
-		manWatcher.WaitTimeout(timeout) // TODO: Handle timeout error
+		manWatcher.WaitTimeout(timeout)
 	}
 
 	for _, manReactor := range s.reactors {
 		manReactor.Stop()
-		manReactor.WaitTimeout(timeout) // TODO: Handle timeout error
+		manReactor.WaitTimeout(timeout)
 	}
 }

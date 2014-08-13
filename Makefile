@@ -1,10 +1,20 @@
-TAGS=plugins_all
+
+default: all
 
 build:
-	@go get ./...
-	@go build -o "receptor" -tags $(TAGS) ./cli
+	@bash --norc -i ./scripts/compileReceptor.sh
+
+plugins:
+	@bash --norc -i ./scripts/compilePlugins.sh
 
 test:
-	go test ./...
+	@bash --norc -i ./scripts/runTests.sh
 
-.PHONY: build
+all: test build plugins
+
+
+clean:
+	@rm -rf -- "./bin"
+	@rm -- "./build.log"
+
+.PHONY: build test plugins all clean

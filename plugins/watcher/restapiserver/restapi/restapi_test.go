@@ -1,4 +1,4 @@
-package restapiserver
+package restapi
 
 import (
 	"bytes"
@@ -88,7 +88,7 @@ func TestFunc(t *testing.T) {
 			t.Errorf("Event host was %s, expected %s", node.Host, restEvent.Host)
 		}
 		if node.Port != restEvent.Port {
-			t.Errorf("Event port was %s, expected %s", node.Port, restEvent.Port)
+			t.Errorf("Event port was %d, expected %d", node.Port, restEvent.Port)
 		}
 		if node.Status != pipe.NodeUp {
 			t.Error("Event node status should be up")

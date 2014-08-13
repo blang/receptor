@@ -57,7 +57,7 @@ func TestFunc(t *testing.T) {
 	data, err := ioutil.ReadFile(tmpFile.Name())
 	lines := strings.Split(string(data), "\n")
 	if countLines := len(lines); countLines != 3 {
-		t.Errorf("Found %d lines instead of 2\n", countLines)
+		t.Errorf("Found %d lines instead of 3: %q\n", countLines, string(data))
 	}
 	t.Logf("Logger output:\n%s", string(data))
 }

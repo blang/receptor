@@ -5,8 +5,7 @@ import (
 )
 
 // EventMerger merges incoming events from inCh if sink could not keep up
-func Merger(inCh chan Event) (eventCh chan Event) {
-	outCh := make(chan Event)
+func Merger(inCh chan Event, outCh chan Event) {
 	go func(inCh chan Event, outCh chan Event) {
 		var tmpCh chan Event
 		var curEvent Event
@@ -31,7 +30,6 @@ func Merger(inCh chan Event) (eventCh chan Event) {
 			}
 		}
 	}(inCh, outCh)
-	return outCh
 }
 
 func Broadcaster(inCh chan Event, outChs []chan Event) {

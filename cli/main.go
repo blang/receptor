@@ -4,31 +4,29 @@ import (
 	"flag"
 	"fmt"
 	"github.com/blang/receptor"
-	_ "github.com/blang/receptor/plugins"
+	"github.com/blang/receptor/plugin"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 )
 
 func main() {
 	cfgFile := flag.String("config", "./receptor.conf.json", "Path to config file")
+	pluginPath := flag.String("plugins", "./plugins", "Path to plugins")
 	flag.Parse()
-
-	log.Printf("Available watchers: [%s]\n", availableWatchers())
-	log.Printf("Available reactors: [%s]\n", availableReactors())
 
 	cfg, err := receptor.NewConfigFromFile(*cfgFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading config file: %s\n", err)
 		os.Exit(1)
 	}
-
-	r := receptor.NewReceptor()
+	lookupService := plugin.NewLookup(*pluginPath)
+	r := receptor.NewReceptor(lookupService)
 	err = r.Init(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while setup services: %s\n", err)
+		os.Exit(1)
 	}
 
 	log.Println("Starting services")
@@ -43,21 +41,4 @@ func main() {
 
 	r.Stop()
 	fmt.Println("Shutdown complete")
-
-}
-
-func availableWatchers() string {
-	var names []string
-	for name, _ := range receptor.Watchers {
-		names = append(names, name)
-	}
-	return strings.Join(names, ", ")
-}
-
-func availableReactors() string {
-	var names []string
-	for name, _ := range receptor.Reactors {
-		names = append(names, name)
-	}
-	return strings.Join(names, ", ")
 }

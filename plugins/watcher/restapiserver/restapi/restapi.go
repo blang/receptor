@@ -1,4 +1,4 @@
-package restapiserver
+package restapi
 
 import (
 	"encoding/json"

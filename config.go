@@ -1,7 +1,5 @@
 package receptor
 
-// TODO: Move to receptor package
-
 import (
 	"encoding/json"
 	"os"
