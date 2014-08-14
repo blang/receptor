@@ -44,8 +44,8 @@ func (r *FileLogReactor) Accept(cfgData json.RawMessage) (pipe.Endpoint, error) 
 				if !ok {
 					return
 				}
-				for _, node := range e.Nodes() {
-					fmt.Fprintf(bufW, "%s: %s (%s) %s:%d\n", time.Now(), node.Name(), node.Type(), node.Host(), node.Port())
+				for _, node := range e {
+					fmt.Fprintf(bufW, "%s: %s (%s) %s:%d\n", time.Now(), node.Name, node.Status, node.Host, node.Port)
 				}
 				if cfg.Unbuffered {
 					bufW.Flush()

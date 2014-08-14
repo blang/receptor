@@ -29,30 +29,20 @@ func TestBookkeeperCloseFull(t *testing.T) {
 func TestBookkeeperInc(t *testing.T) {
 	eventCh := make(chan Event)
 	inIncCh, _ := Bookkeeper(eventCh)
-	inIncCh <- &SingleNode{
-		EName: "Node1",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	}
-	ev, err := receiveEventTimeout(eventCh, 2*time.Second)
+	inIncCh <- NewEventWithNode("Node1", NodeUp, "127.0.0.1", 80)
+	ev, err := receiveEventTimeout(eventCh, 3*time.Second)
 	if err != nil {
-		t.Fatalf("Could not receive event: %s", err)
+		t.Fatalf("Could not receive event: %s, event: %s", err, ev)
 	}
 	if ev == nil {
 		t.Fatal("Expected event")
 	}
-	if len(ev.Nodes()) != 1 {
+	if len(ev) != 1 {
 		t.Fatal("Invalid amount of nodes")
 	}
 
 	// Send same update again
-	inIncCh <- &SingleNode{
-		EName: "Node1",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	}
+	inIncCh <- NewEventWithNode("Node1", NodeUp, "127.0.0.1", 80)
 	_, err = receiveEventOrError(eventCh)
 	if err == nil {
 		t.Fatal("Expected no event")
@@ -63,81 +53,51 @@ func TestBookkeeperFull(t *testing.T) {
 	eventCh := make(chan Event)
 	inIncCh, inFullCh := Bookkeeper(eventCh)
 
-	fullList1 := &MultiNode{}
-	fullList1.Events = append(fullList1.Events, &SingleNode{
-		EName: "Node1",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	})
-	fullList1.Events = append(fullList1.Events, &SingleNode{
-		EName: "Node2",
-		EType: EventNodeUp,
-		EHost: "127.0.0.2",
-		EPort: 81,
-	})
-	fullList1.Events = append(fullList1.Events, &SingleNode{
-		EName: "Node3",
-		EType: EventNodeUp,
-		EHost: "127.0.0.3",
-		EPort: 83,
-	})
+	fullList1 := NewEvent()
+	fullList1.AddNewNode("Node1", NodeUp, "127.0.0.1", 80)
+	fullList1.AddNewNode("Node2", NodeUp, "127.0.0.2", 81)
+	fullList1.AddNewNode("Node3", NodeUp, "127.0.0.3", 83)
 
 	inFullCh <- fullList1
 	ev, err := receiveEventTimeout(eventCh, 2*time.Second)
 	if err != nil {
 		t.Fatalf("Could not receive event: %s", err)
 	}
-	if countNodes := len(ev.Nodes()); countNodes != 3 {
+	if countNodes := len(ev); countNodes != 3 {
 		t.Fatalf("Expected 3 nodes, got %d", countNodes)
 	}
 
-	inIncCh <- &SingleNode{
-		EName: "Node1",
-		EType: EventNodeDown,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	}
+	inIncCh <- NewEventWithNode("Node1", NodeDown, "127.0.0.1", 80)
 	ev, err = receiveEventTimeout(eventCh, 2*time.Second)
 	if err != nil {
 		t.Fatalf("Could not receive event: %s", err)
 	}
-	if countNodes := len(ev.Nodes()); countNodes != 1 {
+	if countNodes := len(ev); countNodes != 1 {
 		t.Fatalf("Expected 1 nodes, got %d", countNodes)
 	}
-	if node := ev.Nodes()[0]; node.Name() != "Node1" || node.Type() != EventNodeDown {
-		t.Fatalf("Wrong event received: %s", node)
+	if node, found := ev["Node1"]; !found {
+		t.Fatal("Event should have info about Node1")
+	} else if node.Status != NodeDown {
+		t.Fatal("Node should be down")
 	}
 
 	// Send full list again
-	fullList2 := &MultiNode{}
-	fullList2.Events = append(fullList2.Events, &SingleNode{
-		EName: "Node1",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	})
-	fullList2.Events = append(fullList2.Events, &SingleNode{
-		EName: "Node2",
-		EType: EventNodeUp,
-		EHost: "127.0.0.2",
-		EPort: 81,
-	})
-	fullList2.Events = append(fullList2.Events, &SingleNode{
-		EName: "Node3",
-		EType: EventNodeUp,
-		EHost: "127.0.0.3",
-		EPort: 83,
-	})
+	fullList2 := NewEvent()
+	fullList2.AddNewNode("Node1", NodeUp, "127.0.0.1", 80)
+	fullList2.AddNewNode("Node2", NodeUp, "127.0.0.2", 81)
+	fullList2.AddNewNode("Node3", NodeUp, "127.0.0.3", 83)
 	inFullCh <- fullList2
+
 	ev, err = receiveEventTimeout(eventCh, 2*time.Second)
 	if err != nil {
 		t.Fatalf("Could not receive event: %s", err)
 	}
-	if countNodes := len(ev.Nodes()); countNodes != 1 {
+	if countNodes := len(ev); countNodes != 1 {
 		t.Fatalf("Expected 1 nodes, got %d", countNodes)
 	}
-	if node := ev.Nodes()[0]; node.Name() != "Node1" || node.Type() != EventNodeUp {
+	if node, found := ev["Node1"]; !found {
+		t.Fatal("Node not found in event")
+	} else if node.Status != NodeUp {
 		t.Fatalf("Wrong event received: %s", node)
 	}
 }
@@ -169,51 +129,31 @@ func receiveEventOrError(eventCh chan Event) (Event, error) {
 func TestBookUpdateInc(t *testing.T) {
 	b := NewBook()
 
-	ev := b.UpdateInc(&SingleNode{
-		EName: "Node1",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	})
+	ev := b.UpdateInc(NewEventWithNode("Node1", NodeUp, "127.0.0.1", 80))
 	if ev == nil {
 		t.Error("No event was generated")
 	}
-	if len(ev.Nodes()) != 1 {
+	if len(ev) != 1 {
 		t.Fatal("Event has wrong number of nodes")
 	}
-	if ev.Nodes()[0].Name() != "Node1" {
-		t.Fatal("Wrong node")
+	if _, found := ev["Node1"]; !found {
+		t.Fatal("Node not found")
 	}
 
 	// Bring same node up again
-	ev = b.UpdateInc(&SingleNode{
-		EName: "Node1",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	})
+	ev = b.UpdateInc(NewEventWithNode("Node1", NodeUp, "127.0.0.1", 80))
 	if ev != nil {
 		t.Fatalf("Did not expect update event, got %s", ev)
 	}
 
 	// Same node down
-	ev = b.UpdateInc(&SingleNode{
-		EName: "Node1",
-		EType: EventNodeDown,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	})
+	ev = b.UpdateInc(NewEventWithNode("Node1", NodeDown, "127.0.0.1", 80))
 	if ev == nil {
 		t.Fatal("Did expect update event, got none")
 	}
 
 	// Bring down unkown host
-	ev = b.UpdateInc(&SingleNode{
-		EName: "NodeUnkown",
-		EType: EventNodeDown,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	})
+	ev = b.UpdateInc(NewEventWithNode("NodeUnkown", NodeDown, "127.0.0.1", 80))
 	if ev != nil {
 		t.Fatalf("Did not expect update event, got %s", ev)
 	}
@@ -222,83 +162,51 @@ func TestBookUpdateInc(t *testing.T) {
 func TestBookUpdateFull(t *testing.T) {
 	b := NewBook()
 
-	fullList1 := &MultiNode{}
-	fullList1.Events = append(fullList1.Events, &SingleNode{
-		EName: "Node1",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	})
-	fullList1.Events = append(fullList1.Events, &SingleNode{
-		EName: "Node2",
-		EType: EventNodeUp,
-		EHost: "127.0.0.2",
-		EPort: 81,
-	})
-	fullList1.Events = append(fullList1.Events, &SingleNode{
-		EName: "Node3",
-		EType: EventNodeUp,
-		EHost: "127.0.0.3",
-		EPort: 83,
-	})
+	fullList1 := NewEvent()
+	fullList1.AddNewNode("Node1", NodeUp, "127.0.0.1", 80)
+	fullList1.AddNewNode("Node2", NodeUp, "127.0.0.2", 81)
+	fullList1.AddNewNode("Node3", NodeUp, "127.0.0.3", 83)
 
 	ev := b.UpdateFull(fullList1)
 	if ev == nil {
 		t.Fatal("No event received")
 	}
-	if countNodes := len(ev.Nodes()); countNodes != 3 {
+	if countNodes := len(ev); countNodes != 3 {
 		t.Fatalf("Expected 3 nodes in event, got %d", countNodes)
 	}
 
 	// Node1 unchanged, Node2 changed port, Node4 new
-	fullList2 := &MultiNode{}
-	fullList2.Events = append(fullList2.Events, &SingleNode{
-		EName: "Node1",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	})
-	fullList2.Events = append(fullList2.Events, &SingleNode{
-		EName: "Node2",
-		EType: EventNodeUp,
-		EHost: "127.0.0.2",
-		EPort: 87, // Port changed
-	})
-	fullList2.Events = append(fullList2.Events, &SingleNode{
-		EName: "Node4",
-		EType: EventNodeUp,
-		EHost: "127.0.0.4",
-		EPort: 84,
-	})
+	fullList2 := NewEvent()
+	fullList2.AddNewNode("Node1", NodeUp, "127.0.0.1", 80)
+	fullList2.AddNewNode("Node2", NodeUp, "127.0.0.2", 87)
+	fullList2.AddNewNode("Node4", NodeUp, "127.0.0.4", 84)
 
 	ev = b.UpdateFull(fullList2)
 	if ev == nil {
 		t.Fatal("No event received")
 	}
 
-	if countNodes := len(ev.Nodes()); countNodes != 3 {
+	if countNodes := len(ev); countNodes != 3 {
 		t.Fatalf("Expected 2 nodes in event, got %d", countNodes)
 	}
 
-	tmpM := nodesArrToMap(ev.Nodes())
-
 	// Node1
-	if _, found := tmpM["Node1"]; found {
+	if _, found := ev["Node1"]; found {
 		t.Error("Did not expect node1")
 	}
 
 	// Node2
-	if node, found := tmpM["Node2"]; found {
-		if node.Port() != 87 {
-			t.Errorf("Expected port of node2 to be updated, got: %d", node.Port())
+	if node, found := ev["Node2"]; found {
+		if node.Port != 87 {
+			t.Errorf("Expected port of node2 to be updated, got: %d", node.Port)
 		}
 	} else {
 		t.Error("Expected node2 in event")
 	}
 
 	// Node 3
-	if node, found := tmpM["Node3"]; found {
-		if node.Type() != EventNodeDown {
+	if node, found := ev["Node3"]; found {
+		if node.Status != NodeDown {
 			t.Error("Expected node3 to be down now")
 		}
 	} else {
@@ -306,8 +214,8 @@ func TestBookUpdateFull(t *testing.T) {
 	}
 
 	// Node 4
-	if node, found := tmpM["Node4"]; found {
-		if node.Type() != EventNodeUp || node.Host() != "127.0.0.4" || node.Port() != 84 {
+	if node, found := ev["Node4"]; found {
+		if node.Status != NodeUp || node.Host != "127.0.0.4" || node.Port != 84 {
 			t.Errorf("Node4 data wrong: %s", node)
 		}
 	} else {
@@ -315,25 +223,10 @@ func TestBookUpdateFull(t *testing.T) {
 	}
 
 	// Send same update again
-	fullList3 := &MultiNode{}
-	fullList3.Events = append(fullList3.Events, &SingleNode{
-		EName: "Node1",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	})
-	fullList3.Events = append(fullList3.Events, &SingleNode{
-		EName: "Node2",
-		EType: EventNodeUp,
-		EHost: "127.0.0.2",
-		EPort: 87, // Port changed
-	})
-	fullList3.Events = append(fullList3.Events, &SingleNode{
-		EName: "Node4",
-		EType: EventNodeUp,
-		EHost: "127.0.0.4",
-		EPort: 84,
-	})
+	fullList3 := NewEvent()
+	fullList3.AddNewNode("Node1", NodeUp, "127.0.0.1", 80)
+	fullList3.AddNewNode("Node2", NodeUp, "127.0.0.2", 87)
+	fullList3.AddNewNode("Node4", NodeUp, "127.0.0.4", 84)
 
 	ev = b.UpdateFull(fullList3)
 	if ev != nil {
@@ -341,112 +234,53 @@ func TestBookUpdateFull(t *testing.T) {
 	}
 }
 
-func nodesArrToMap(nodeData []NodeData) map[string]NodeData {
-	tmpM := make(map[string]NodeData)
-	for _, node := range nodeData {
-		tmpM[node.Name()] = node
-	}
-	return tmpM
-}
-
-func TestBookFull(t *testing.T) {
-	b := NewBook()
-	fullList := &MultiNode{}
-	fullList.Events = append(fullList.Events, &SingleNode{
-		EName: "Node1",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	})
-	fullList.Events = append(fullList.Events, &SingleNode{
-		EName: "Node2",
-		EType: EventNodeUp,
-		EHost: "127.0.0.2",
-		EPort: 87, // Port changed
-	})
-	fullList.Events = append(fullList.Events, &SingleNode{
-		EName: "Node4",
-		EType: EventNodeUp,
-		EHost: "127.0.0.4",
-		EPort: 84,
-	})
-
-	b.UpdateFull(fullList)
-
-	ev := b.Full()
-	if ev == nil {
-		t.Fatal("Event was nil")
-	}
-
-	if nodeCount := len(ev.Nodes()); nodeCount != 3 {
-		t.Fatalf("Expected 3 nodes, got %d", nodeCount)
-	}
-}
-
 func TestBookkeeperReceiver(t *testing.T) {
 	eventCh := make(chan Event)
 
 	fullCh := BookkeeperReceiver(eventCh)
-	eventCh <- &SingleNode{
-		EName: "Node1",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	}
+	eventCh <- NewEventWithNode("Node1", NodeUp, "127.0.0.1", 80)
 
 	fullSet := <-fullCh
 	if fullSet == nil {
 		t.Fatal("Nil event received")
 	}
-	if nodeCount := len(fullSet.Nodes()); nodeCount != 1 {
+	if nodeCount := len(fullSet); nodeCount != 1 {
 		t.Fatalf("Expected one node, received: %d", nodeCount)
 	}
-	if node := fullSet.Nodes()[0]; node.Name() != "Node1" {
-		t.Fatalf("Expected Node1, received %s", node.Name())
+	if _, found := fullSet["Node1"]; !found {
+		t.Fatal("Expected Node1")
 	}
 
-	eventCh <- &SingleNode{
-		EName: "Node2",
-		EType: EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 81,
-	}
+	eventCh <- NewEventWithNode("Node2", NodeUp, "127.0.0.1", 81)
 
 	fullSet = <-fullCh
 	if fullSet == nil {
 		t.Fatal("Nil event received")
 	}
-	if nodeCount := len(fullSet.Nodes()); nodeCount != 2 {
+	if nodeCount := len(fullSet); nodeCount != 2 {
 		t.Fatalf("Expected two nodes, received: %d", nodeCount)
 	}
 
-	m := nodesArrToMap(fullSet.Nodes())
-
-	if _, found := m["Node1"]; !found {
+	if _, found := fullSet["Node1"]; !found {
 		t.Fatal("Node1 not found")
 	}
-	if _, found := m["Node2"]; !found {
+	if _, found := fullSet["Node2"]; !found {
 		t.Fatal("Node2 not found")
 	}
 
 	// Node2 goes down
-	eventCh <- &SingleNode{
-		EName: "Node1",
-		EType: EventNodeDown,
-		EHost: "127.0.0.1",
-		EPort: 80,
-	}
+	eventCh <- NewEventWithNode("Node1", NodeDown, "127.0.0.1", 80)
 
 	fullSet = <-fullCh
 	if fullSet == nil {
 		t.Fatal("Nil event received")
 	}
-	if nodeCount := len(fullSet.Nodes()); nodeCount != 1 {
+	if nodeCount := len(fullSet); nodeCount != 1 {
 		t.Fatalf("Expected one nodes, received: %d", nodeCount)
 	}
 
-	if node := fullSet.Nodes()[0]; node.Name() != "Node2" {
-		t.Fatalf("Expected Node2, received %s", node.Name())
+	if _, found := fullSet["Node2"]; !found {
+		t.Fatal("Expected Node2")
 	}
 
 	close(eventCh)

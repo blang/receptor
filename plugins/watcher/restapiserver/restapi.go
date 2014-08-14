@@ -40,7 +40,7 @@ type RestEvent struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
 	Host string `json:"host"`
-	Port int    `json:"port"`
+	Port uint16 `json:"port"`
 }
 
 func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (pipe.Endpoint, error) {
@@ -63,24 +63,19 @@ func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (pipe.Endpoint, e
 				return
 			}
 
-			var eventType pipe.EventType
+			var nodeStatus pipe.NodeStatus
 			switch restEvent.Type {
 			case "nodeup":
-				eventType = pipe.EventNodeUp
+				nodeStatus = pipe.NodeUp
 			case "nodedown":
-				eventType = pipe.EventNodeDown
+				nodeStatus = pipe.NodeDown
 			default:
 				w.WriteHeader(http.StatusBadRequest)
 				fmt.Fprintln(w, "Bad request: Invalid event type")
 				return
 			}
 
-			eventCh <- &pipe.SingleNode{
-				EName: restEvent.Name,
-				EHost: restEvent.Host,
-				EPort: restEvent.Port,
-				EType: eventType,
-			}
+			eventCh <- pipe.NewEventWithNode(restEvent.Name, nodeStatus, restEvent.Host, restEvent.Port)
 
 			fmt.Fprintln(w, "OK")
 		})

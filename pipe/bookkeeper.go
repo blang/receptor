@@ -12,13 +12,13 @@ import (
 // Is thread-safe.
 type Book struct {
 	mutex sync.RWMutex
-	m     map[string]NodeData
+	m     map[string]NodeInfo
 }
 
 // Creates a new empty book
 func NewBook() *Book {
 	return &Book{
-		m: make(map[string]NodeData),
+		m: make(map[string]NodeInfo),
 	}
 }
 
@@ -31,31 +31,30 @@ func NewBook() *Book {
 func (b *Book) UpdateInc(ev Event) Event {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	outEv := &MultiNode{}
-	for _, node := range ev.Nodes() {
-		if bookNode, found := b.m[node.Name()]; found {
-			if bookNode.Type() != node.Type() ||
-				bookNode.Host() != node.Host() ||
-				bookNode.Port() != node.Port() {
+	outEv := NewEvent()
+	for _, node := range ev {
+		if bookNode, found := b.m[node.Name]; found {
+			if bookNode.Status != node.Status ||
+				bookNode.Host != node.Host ||
+				bookNode.Port != node.Port {
 
 				// Add/update if up, delete if down
-				if node.Type() == EventNodeUp {
-					b.m[bookNode.Name()] = node
+				if node.Status == NodeUp {
+					b.m[bookNode.Name] = node
 				} else {
-					delete(b.m, bookNode.Name())
+					delete(b.m, bookNode.Name)
 				}
-
-				outEv.Events = append(outEv.Events, node)
+				outEv.AddNode(node)
 			}
 		} else { // Not in book
-			if node.Type() == EventNodeDown {
+			if node.Status == NodeDown {
 				continue // Down node never seen before, don't care
 			}
-			b.m[node.Name()] = node
-			outEv.Events = append(outEv.Events, node)
+			b.m[node.Name] = node
+			outEv.AddNode(node)
 		}
 	}
-	if len(outEv.Nodes()) > 0 {
+	if len(outEv) > 0 {
 		return outEv
 	}
 	return nil
@@ -67,42 +66,36 @@ func (b *Book) UpdateInc(ev Event) Event {
 func (b *Book) UpdateFull(ev Event) Event {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	outEv := &MultiNode{}
+	outEv := NewEvent()
 	marked := make(map[string]struct{})
-	for _, node := range ev.Nodes() {
-		if node.Type() == EventNodeDown {
+	for _, node := range ev {
+		if node.Status == NodeDown {
 			continue // EventNodeDown could not be used on full update
 		}
-		if bookNode, found := b.m[node.Name()]; found {
-			if bookNode.Type() != node.Type() ||
-				bookNode.Host() != node.Host() ||
-				bookNode.Port() != node.Port() {
+		if bookNode, found := b.m[node.Name]; found {
+			if bookNode.Status != node.Status ||
+				bookNode.Host != node.Host ||
+				bookNode.Port != node.Port {
 
-				b.m[bookNode.Name()] = node
-				marked[bookNode.Name()] = struct{}{}
-				outEv.Events = append(outEv.Events, node)
+				b.m[bookNode.Name] = node
+				marked[bookNode.Name] = struct{}{}
+				outEv.AddNode(node)
 			} else {
-				marked[bookNode.Name()] = struct{}{}
+				marked[bookNode.Name] = struct{}{}
 			}
 		} else { // Not found in book
-			marked[node.Name()] = struct{}{}
-			b.m[node.Name()] = node
-			outEv.Events = append(outEv.Events, node)
+			marked[node.Name] = struct{}{}
+			b.m[node.Name] = node
+			outEv.AddNode(node)
 		}
 	}
 	for name, node := range b.m {
 		if _, found := marked[name]; !found {
-
-			outEv.Events = append(outEv.Events, &SingleNode{
-				EName: node.Name(),
-				EType: EventNodeDown,
-				EHost: node.Host(),
-				EPort: node.Port(),
-			})
+			outEv.AddNode(NewNodeInfo(node.Name, NodeDown, node.Host, node.Port))
 			delete(b.m, name)
 		}
 	}
-	if len(outEv.Nodes()) > 0 {
+	if len(outEv) > 0 {
 		return outEv
 	}
 	return nil
@@ -113,9 +106,9 @@ func (b *Book) UpdateFull(ev Event) Event {
 func (b *Book) Full() Event {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
-	ev := &MultiNode{}
-	for _, nodeData := range b.m {
-		ev.Events = append(ev.Events, nodeData)
+	ev := NewEvent()
+	for _, node := range b.m {
+		ev.AddNode(node)
 	}
 	return ev
 }

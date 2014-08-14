@@ -2,7 +2,6 @@ package receptor
 
 import (
 	"github.com/blang/receptor/pipe"
-	"strings"
 	"testing"
 	"time"
 )
@@ -40,7 +39,7 @@ func BenchmarkPipelineThroughput(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		inputCh <- &pipe.SingleNode{}
+		inputCh <- pipe.NewEvent()
 		<-outputCh
 	}
 }
@@ -99,19 +98,11 @@ func BenchmarkPipelineThroughputTwice(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		inputCh1 <- &pipe.SingleNode{}
+		inputCh1 <- pipe.NewEvent()
 		<-outputCh1
 		<-outputCh2
-		inputCh2 <- &pipe.SingleNode{}
+		inputCh2 <- pipe.NewEvent()
 		<-outputCh1
 		<-outputCh2
 	}
-}
-
-func stringEventNodes(nodes []pipe.NodeData) string {
-	var str []string
-	for _, n := range nodes {
-		str = append(str, n.Name())
-	}
-	return strings.Join(str, ", ")
 }

@@ -19,7 +19,7 @@ func Merger(inCh chan Event) (eventCh chan Event) {
 				}
 				// Received multiple events, sink could not keep up, merge events to one up-to-date event
 				if curEvent != nil {
-					curEvent = e.Merge(curEvent)
+					curEvent.Update(e)
 				} else {
 					curEvent = e
 				}

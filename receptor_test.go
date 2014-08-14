@@ -22,10 +22,7 @@ func (w *testWatcher) Accept(json.RawMessage) (pipe.Endpoint, error) {
 	w.acceptCalled = true
 	return pipe.EndpointFunc(func(eventCh chan pipe.Event, closeCh chan struct{}) {
 		for i := 0; i < 100; i++ {
-			eventCh <- &pipe.SingleNode{
-				EName: "test" + strconv.Itoa(i),
-				EType: pipe.EventNodeUp,
-			}
+			eventCh <- pipe.NewEventWithNode("test"+strconv.Itoa(i), pipe.NodeUp, "127.0.0."+strconv.Itoa(i), 80)
 		}
 		close(eventCh)
 	}), nil
@@ -99,8 +96,8 @@ func TestSystem(t *testing.T) {
 			if !ok {
 				return
 			}
-			count += len(e.Nodes())
-			t.Logf("%d Event received: %s\n", len(e.Nodes()), stringEventNodes(e.Nodes()))
+			count += len(e)
+			t.Logf("%d Event received: %s\n", len(e), e)
 			if count == 100 {
 				receptor.Stop()
 			}

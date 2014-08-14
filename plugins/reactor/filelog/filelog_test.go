@@ -43,19 +43,9 @@ func TestFunc(t *testing.T) {
 	eventCh := make(chan pipe.Event)
 	go manHandle.Handle(eventCh)
 
-	eventCh <- &pipe.SingleNode{
-		EName: "Node1",
-		EType: pipe.EventNodeUp,
-		EHost: "127.0.0.1",
-		EPort: 8080,
-	}
+	eventCh <- pipe.NewEventWithNode("Node1", pipe.NodeUp, "127.0.0.1", 80)
 
-	eventCh <- &pipe.SingleNode{
-		EName: "Node2",
-		EType: pipe.EventNodeDown,
-		EHost: "127.0.0.1",
-		EPort: 8080,
-	}
+	eventCh <- pipe.NewEventWithNode("Node2", pipe.NodeDown, "127.0.0.1", 80)
 
 	close(eventCh)
 	manHandle.Stop()

@@ -1,115 +1,78 @@
 package pipe
 
 import (
-	"sort"
+	"fmt"
+	"strings"
 )
 
-type EventType int
+type NodeStatus int
 
 const (
-	EventNodeUp   EventType = iota + 1 // Node is up now
-	EventNodeDown                      // Node is down now
+	NodeUp NodeStatus = iota + 1 // Node is up
+	NodeDown
 )
 
-func (t EventType) String() string {
-	switch t {
-	case EventNodeUp:
-		return "Node Up"
-	case EventNodeDown:
-		return "Node Down"
+func (s NodeStatus) String() string {
+	switch s {
+	case NodeUp:
+		return "NodeUp"
+	case NodeDown:
+		return "NodeDown"
 	default:
-		return "Unknown EventType"
+		return "Unknown"
 	}
 }
 
-type Event interface {
-	Nodes() []NodeData
-	Merge(older Event) Event
+type NodeInfo struct {
+	Name   string
+	Status NodeStatus
+	Host   string
+	Port   uint16
 }
 
-type NodeData interface {
-	Name() string
-	Type() EventType
-	Host() string
-	Port() int
-}
-
-// SingleEvent can be used as Event.
-type SingleNode struct {
-	EName string
-	EType EventType
-	EHost string
-	EPort int
-}
-
-type MultiNode struct {
-	Events []NodeData
-}
-
-func (e *MultiNode) Nodes() []NodeData {
-	return e.Events
-}
-
-func (e *SingleNode) Name() string {
-	return e.EName
-}
-
-func (e *SingleNode) Type() EventType {
-	return e.EType
-}
-
-func (e *SingleNode) Host() string {
-	return e.EHost
-}
-
-func (e *SingleNode) Port() int {
-	return e.EPort
-}
-
-func (e *SingleNode) Nodes() []NodeData {
-	return []NodeData{NodeData(e)}
-}
-
-type NodeDataByName []NodeData
-
-func (n NodeDataByName) Len() int {
-	return len(n)
-}
-
-func (n NodeDataByName) Swap(i, j int) {
-	n[i], n[j] = n[j], n[i]
-}
-
-func (n NodeDataByName) Less(i, j int) bool {
-	return n[i].Name() < n[j].Name()
-}
-
-func (e *SingleNode) Merge(older Event) Event {
-	merge := &MultiNode{}
-	for _, oldNE := range older.Nodes() {
-		if oldNE.Name() != e.Name() {
-			merge.Events = append(merge.Events, oldNE)
-		}
+func NewNodeInfo(name string, status NodeStatus, host string, port uint16) NodeInfo {
+	return NodeInfo{
+		Name:   name,
+		Status: status,
+		Host:   host,
+		Port:   port,
 	}
-	merge.Events = append(merge.Events, e)
-
-	return merge
 }
 
-func (e *MultiNode) Merge(older Event) Event {
-	merge := &MultiNode{}
-	for _, newNE := range e.Nodes() {
-		merge.Events = append(merge.Events, newNE)
+func (n NodeInfo) String() string {
+	return fmt.Sprintf("Name: %s, Status: %s, Host: %s, Port: %d", n.Name, n.Status, n.Host, n.Port)
+}
+
+type Event map[string]NodeInfo
+
+func NewEvent() Event {
+	return Event(make(map[string]NodeInfo))
+}
+
+func NewEventWithNode(name string, status NodeStatus, host string, port uint16) Event {
+	event := NewEvent()
+	event[name] = NewNodeInfo(name, status, host, port)
+	return event
+}
+
+func (e Event) Update(newer Event) {
+	for key, val := range newer {
+		e[key] = val
 	}
-	sort.Sort(NodeDataByName(e.Events))
+}
 
-	for _, oldNE := range older.Nodes() {
+func (e Event) AddNode(node NodeInfo) {
+	e[node.Name] = node
+}
 
-		// Search NewNodes for oldNE, if nothing was found we need to add this to the new event
-		if sort.Search(len(e.Events), func(i int) bool { return e.Events[i].Name() >= oldNE.Name() }) == -1 {
-			merge.Events = append(merge.Events, oldNE)
-		}
+func (e Event) AddNewNode(name string, status NodeStatus, host string, port uint16) {
+	e[name] = NewNodeInfo(name, status, host, port)
+}
+
+func (e Event) String() string {
+	var parts []string
+	for _, node := range e {
+		parts = append(parts, node.String())
 	}
-
-	return merge
+	return "Event Nodes: " + strings.Join(parts, ", ")
 }

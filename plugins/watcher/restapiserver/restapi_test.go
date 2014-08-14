@@ -67,27 +67,32 @@ func TestFunc(t *testing.T) {
 
 	// Check if event was fired
 	var recv pipe.Event
+	var ok bool
 	select {
-	case recv = <-eventCh:
+	case recv, ok = <-eventCh:
+		if !ok {
+			t.Fatal("Channel closed")
+		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("Timeout: No event received")
 	}
 
 	// Test if event is correct
-	if nlen := len(recv.Nodes()); nlen != 1 {
+	if nlen := len(recv); nlen != 1 {
 		t.Errorf("Event has %d nodes, expected 1", nlen)
 	}
-	if evName := recv.Nodes()[0].Name(); evName != restEvent.Name {
-		t.Errorf("Event name was %s, expected %s", evName, restEvent.Name)
-	}
-	if evHost := recv.Nodes()[0].Host(); evHost != restEvent.Host {
-		t.Errorf("Event host was %s, expected %s", evHost, restEvent.Host)
-	}
-	if evPort := recv.Nodes()[0].Port(); evPort != restEvent.Port {
-		t.Errorf("Event port was %s, expected %s", evPort, restEvent.Port)
-	}
-	if evType := recv.Nodes()[0].Type(); evType != pipe.EventNodeUp {
-		t.Errorf("Event type was %s, expected %s", evType, pipe.EventNodeUp)
+	if node, found := recv["testservice"]; !found {
+		t.Fatal("Node testservice not found")
+	} else {
+		if node.Host != restEvent.Host {
+			t.Errorf("Event host was %s, expected %s", node.Host, restEvent.Host)
+		}
+		if node.Port != restEvent.Port {
+			t.Errorf("Event port was %s, expected %s", node.Port, restEvent.Port)
+		}
+		if node.Status != pipe.NodeUp {
+			t.Error("Event node status should be up")
+		}
 	}
 
 	// Check shutdown
