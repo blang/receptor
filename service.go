@@ -1,21 +1,21 @@
 package receptor
 
 import (
-	"github.com/blang/receptor/pipeline"
+	"github.com/blang/receptor/pipe"
 	"time"
 )
 
 type Service struct {
 	name     string
-	reactors map[string]*pipeline.ManagedEndpoint
-	watchers map[string]*pipeline.ManagedEndpoint
+	reactors map[string]*pipe.ManagedEndpoint
+	watchers map[string]*pipe.ManagedEndpoint
 }
 
 func NewService(name string) *Service {
 	return &Service{
 		name:     name,
-		reactors: make(map[string]*pipeline.ManagedEndpoint),
-		watchers: make(map[string]*pipeline.ManagedEndpoint),
+		reactors: make(map[string]*pipe.ManagedEndpoint),
+		watchers: make(map[string]*pipe.ManagedEndpoint),
 	}
 }
 
@@ -23,40 +23,40 @@ func (s *Service) Name() string {
 	return s.name
 }
 
-func (s *Service) AddReactorEndpoint(name string, endpoint *pipeline.ManagedEndpoint) {
+func (s *Service) AddReactorEndpoint(name string, endpoint *pipe.ManagedEndpoint) {
 	s.reactors[name] = endpoint
 }
 
-func (s *Service) AddWatcherEndpoint(name string, endpoint *pipeline.ManagedEndpoint) {
+func (s *Service) AddWatcherEndpoint(name string, endpoint *pipe.ManagedEndpoint) {
 	s.watchers[name] = endpoint
 }
 
 // Start starts the service.
-// It creates a pipeline between all watchers and reactors and starts them, does not block.
+// It creates a pipe between all watchers and reactors and starts them, does not block.
 func (s *Service) Start() {
-	eventCh := make(chan pipeline.Event)
-	var outChs []chan pipeline.Event
+	eventCh := make(chan pipe.Event)
+	var outChs []chan pipe.Event
 
 	// Start Reactors
 	for _, reactorManHandler := range s.reactors {
-		outCh := make(chan pipeline.Event)
+		outCh := make(chan pipe.Event)
 		outChs = append(outChs, outCh)
 
 		// Add Congestion control before each reactor
-		controlledOutCh := pipeline.Merger(outCh)
+		controlledOutCh := pipe.Merger(outCh)
 
 		go reactorManHandler.Handle(controlledOutCh)
 	}
 
 	// Broadcast from EventCh to all reactors
-	pipeline.Broadcaster(eventCh, outChs)
+	pipe.Broadcaster(eventCh, outChs)
 
 	// Forwarder will forward each watchchannel to eventCh
-	forwarder := pipeline.NewForwarder(eventCh)
+	forwarder := pipe.NewForwarder(eventCh)
 
 	// Start Watchers
 	for _, watchManHandler := range s.watchers {
-		watcherEventCh := make(chan pipeline.Event)
+		watcherEventCh := make(chan pipe.Event)
 		forwarder.Forward(watcherEventCh) // Forward watcherEventCh to eventCh
 
 		go watchManHandler.Handle(watcherEventCh)

@@ -2,7 +2,7 @@ package filelog
 
 import (
 	"encoding/json"
-	"github.com/blang/receptor/pipeline"
+	"github.com/blang/receptor/pipe"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -12,7 +12,7 @@ import (
 
 func TestFunc(t *testing.T) {
 	filelog := &FileLogReactor{}
-	react := pipeline.Reactor(filelog) // Check if conform interface
+	react := pipe.Reactor(filelog) // Check if conform interface
 
 	err := react.Setup(nil)
 	if err != nil {
@@ -38,21 +38,21 @@ func TestFunc(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Does not accept config: %s\n", err)
 	}
-	manHandle := pipeline.NewManagedEndpoint(handle)
+	manHandle := pipe.NewManagedEndpoint(handle)
 
-	eventCh := make(chan pipeline.Event)
+	eventCh := make(chan pipe.Event)
 	go manHandle.Handle(eventCh)
 
-	eventCh <- &pipeline.SingleNode{
+	eventCh <- &pipe.SingleNode{
 		EName: "Node1",
-		EType: pipeline.EventNodeUp,
+		EType: pipe.EventNodeUp,
 		EHost: "127.0.0.1",
 		EPort: 8080,
 	}
 
-	eventCh <- &pipeline.SingleNode{
+	eventCh <- &pipe.SingleNode{
 		EName: "Node2",
-		EType: pipeline.EventNodeDown,
+		EType: pipe.EventNodeDown,
 		EHost: "127.0.0.1",
 		EPort: 8080,
 	}

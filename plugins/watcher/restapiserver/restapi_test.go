@@ -3,7 +3,7 @@ package restapiserver
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/blang/receptor/pipeline"
+	"github.com/blang/receptor/pipe"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,12 +34,12 @@ func TestFunc(t *testing.T) {
 	}
 
 	handle, err := watcher.Accept(json.RawMessage(b))
-	manHandle := pipeline.NewManagedEndpoint(handle)
+	manHandle := pipe.NewManagedEndpoint(handle)
 	if err != nil {
 		t.Fatalf("Watcher accept failed: %s", err)
 	}
 
-	eventCh := make(chan pipeline.Event, 1)
+	eventCh := make(chan pipe.Event, 1)
 
 	watcher.IsRunning = true // Fake Running server
 	testserver := httptest.NewServer(watcher.Router)
@@ -66,7 +66,7 @@ func TestFunc(t *testing.T) {
 	}
 
 	// Check if event was fired
-	var recv pipeline.Event
+	var recv pipe.Event
 	select {
 	case recv = <-eventCh:
 	case <-time.After(5 * time.Second):
@@ -86,8 +86,8 @@ func TestFunc(t *testing.T) {
 	if evPort := recv.Nodes()[0].Port(); evPort != restEvent.Port {
 		t.Errorf("Event port was %s, expected %s", evPort, restEvent.Port)
 	}
-	if evType := recv.Nodes()[0].Type(); evType != pipeline.EventNodeUp {
-		t.Errorf("Event type was %s, expected %s", evType, pipeline.EventNodeUp)
+	if evType := recv.Nodes()[0].Type(); evType != pipe.EventNodeUp {
+		t.Errorf("Event type was %s, expected %s", evType, pipe.EventNodeUp)
 	}
 
 	// Check shutdown

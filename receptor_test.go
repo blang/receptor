@@ -2,7 +2,7 @@ package receptor
 
 import (
 	"encoding/json"
-	"github.com/blang/receptor/pipeline"
+	"github.com/blang/receptor/pipe"
 	"strconv"
 	"testing"
 	"time"
@@ -18,13 +18,13 @@ func (w *testWatcher) Setup(json.RawMessage) error {
 	return nil
 }
 
-func (w *testWatcher) Accept(json.RawMessage) (pipeline.Endpoint, error) {
+func (w *testWatcher) Accept(json.RawMessage) (pipe.Endpoint, error) {
 	w.acceptCalled = true
-	return pipeline.EndpointFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipe.EndpointFunc(func(eventCh chan pipe.Event, closeCh chan struct{}) {
 		for i := 0; i < 100; i++ {
-			eventCh <- &pipeline.SingleNode{
+			eventCh <- &pipe.SingleNode{
 				EName: "test" + strconv.Itoa(i),
-				EType: pipeline.EventNodeUp,
+				EType: pipe.EventNodeUp,
 			}
 		}
 		close(eventCh)
@@ -34,17 +34,17 @@ func (w *testWatcher) Accept(json.RawMessage) (pipeline.Endpoint, error) {
 type testReactor struct {
 	setupCalled    bool
 	acceptCalled   bool
-	receivedEvents []pipeline.Event
-	eventRedirect  chan pipeline.Event
+	receivedEvents []pipe.Event
+	eventRedirect  chan pipe.Event
 }
 
 func (r *testReactor) Setup(json.RawMessage) error {
 	r.setupCalled = true
 	return nil
 }
-func (r *testReactor) Accept(json.RawMessage) (pipeline.Endpoint, error) {
+func (r *testReactor) Accept(json.RawMessage) (pipe.Endpoint, error) {
 	r.acceptCalled = true
-	return pipeline.EndpointFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipe.EndpointFunc(func(eventCh chan pipe.Event, closeCh chan struct{}) {
 		for e := range eventCh {
 			r.receivedEvents = append(r.receivedEvents, e)
 			r.eventRedirect <- e
@@ -56,7 +56,7 @@ func (r *testReactor) Accept(json.RawMessage) (pipeline.Endpoint, error) {
 func TestSystem(t *testing.T) {
 	watcher := &testWatcher{}
 	react := &testReactor{
-		eventRedirect: make(chan pipeline.Event),
+		eventRedirect: make(chan pipe.Event),
 	}
 	Watchers["testWatcher"] = watcher
 	Reactors["testReactor"] = react

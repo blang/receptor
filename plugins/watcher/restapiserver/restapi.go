@@ -3,7 +3,7 @@ package restapiserver
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/blang/receptor/pipeline"
+	"github.com/blang/receptor/pipe"
 	"net/http"
 )
 
@@ -43,7 +43,7 @@ type RestEvent struct {
 	Port int    `json:"port"`
 }
 
-func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (pipeline.Endpoint, error) {
+func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (pipe.Endpoint, error) {
 	conf := ServiceConfig{
 		Service: "default",
 	}
@@ -52,7 +52,7 @@ func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (pipeline.Endpoin
 		return nil, err
 	}
 
-	return pipeline.EndpointFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipe.EndpointFunc(func(eventCh chan pipe.Event, closeCh chan struct{}) {
 
 		w.Router.HandleFunc("/service/"+conf.Service, func(w http.ResponseWriter, r *http.Request) {
 			var restEvent RestEvent
@@ -63,19 +63,19 @@ func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (pipeline.Endpoin
 				return
 			}
 
-			var eventType pipeline.EventType
+			var eventType pipe.EventType
 			switch restEvent.Type {
 			case "nodeup":
-				eventType = pipeline.EventNodeUp
+				eventType = pipe.EventNodeUp
 			case "nodedown":
-				eventType = pipeline.EventNodeDown
+				eventType = pipe.EventNodeDown
 			default:
 				w.WriteHeader(http.StatusBadRequest)
 				fmt.Fprintln(w, "Bad request: Invalid event type")
 				return
 			}
 
-			eventCh <- &pipeline.SingleNode{
+			eventCh <- &pipe.SingleNode{
 				EName: restEvent.Name,
 				EHost: restEvent.Host,
 				EPort: restEvent.Port,

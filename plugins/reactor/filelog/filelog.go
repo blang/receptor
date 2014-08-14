@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/blang/receptor/pipeline"
+	"github.com/blang/receptor/pipe"
 	"os"
 	"time"
 )
@@ -21,7 +21,7 @@ func (r *FileLogReactor) Setup(_ json.RawMessage) error {
 	// No global config needed
 	return nil
 }
-func (r *FileLogReactor) Accept(cfgData json.RawMessage) (pipeline.Endpoint, error) {
+func (r *FileLogReactor) Accept(cfgData json.RawMessage) (pipe.Endpoint, error) {
 	var cfg ServiceConfig
 	err := json.Unmarshal(cfgData, &cfg)
 	if err != nil {
@@ -33,7 +33,7 @@ func (r *FileLogReactor) Accept(cfgData json.RawMessage) (pipeline.Endpoint, err
 	}
 	bufW := bufio.NewWriter(f)
 
-	return pipeline.EndpointFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipe.EndpointFunc(func(eventCh chan pipe.Event, closeCh chan struct{}) {
 		defer func() {
 			bufW.Flush()
 			f.Close()

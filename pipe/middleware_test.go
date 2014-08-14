@@ -1,4 +1,4 @@
-package pipeline
+package pipe
 
 import (
 	"sort"
@@ -86,7 +86,7 @@ func TestMergerCongestionMerge(t *testing.T) {
 	}
 	close(inCh)
 
-	// If Input is closed, pipeline is shut down, pending events are ignored
+	// If Input is closed, pipe is shut down, pending events are ignored
 	if !isChannelClosed(outCh) {
 		t.Fatal("Output channel not closed")
 	}
@@ -155,7 +155,7 @@ func TestForwarder(t *testing.T) {
 
 	close(inCh1)
 
-	// Test if pipeline works after one forwarder turns down
+	// Test if pipe works after one forwarder turns down
 	inCh2 <- &SingleNode{EName: "Test3"}
 
 	select {
