@@ -27,7 +27,7 @@ The **life cycle** of every plugin looks the same:
   - (on shutdown) The `Endpoint` gets closed
 
 The interface you need to implement is the same for a `Watcher` and `Reactor`:
-```golang
+```go
 type Watcher/Reactor interface {
   Setup(cfg json.RawMessage) error
   Accept(cfg json.RawMessage) (Endpoint, error)
@@ -59,7 +59,7 @@ don't start any background process.
 The Endpoint is an instance of your plugin configured for a service, ready to run.
 It needs to implement the following interface.
 
-```golang
+```go
 type Endpoint interface {
   Handle(eventCh chan Event, closeCh chan struct{})
 }
@@ -68,7 +68,7 @@ type Endpoint interface {
 For most plugins there's a simpler way to create an `Endpoint` using a closure
 and returning an `EndpointFunc`:
 
-```golang
+```go
 type EndpointFunc func(eventCh chan Event, closeCh chan struct{})
 ```
 
@@ -85,7 +85,7 @@ Please read the [Endpoint in general](#the-endpoint-in-general) first.
 
 Your watcher needs to send events down the pipeline, this is simply done by creating a event and send it over the channel:
 
-```golang
+```go
 eventCh <- pipe.NewEventWithNode("Nodename", pipe.NodeUp, "127.0.0.1", 80)
 ```
 
@@ -106,7 +106,7 @@ Please read the [Endpoint in general](#the-endpoint-in-general) first.
 
 A Reactor receives events from the pipeline:
 
-```golang
+```go
 event, ok := <- eventCh
 ```
 It's that simple. Have a look at [Events](#events) for examples how to work with events.
@@ -117,10 +117,32 @@ Like the watcher, you need to shut down your endpoint properly on those signals:
 
 On both signals, simply cleanup, return and you're done!
 
+### Finally: Serve the plugin
+
+To serve your plugin using it's own process your main method needs to look like this:
+```go
+package main
+
+import (
+  "github.com/blang/receptor/plugin"
+  "github.com/blang/receptor/plugins/watcher/dummy/dummy"
+)
+
+func main() {
+  plugin.ServeWatcher(&dummy.DummyWatcher{})
+}
+```
+
+To serve a `Reactor` its analogous:
+
+```go
+plugin.ServeReactor(&filelog.FileLogReactor{})
+```
+
 ## Events
 
 Simply create events:
-```golang
+```go
 ev:=pipe.NewEventWithNode("Nodename", pipe.NodeUp, "127.0.0.1", 80)
 ev:=pipe.NewEvent()
 ev.AddNewNode("Nodename", pipe.NodeUp, "127.0.0.1", 80)
@@ -130,7 +152,7 @@ ev.AddNode(pipe.NewNodeInfo("Nodename", pipe.NodeUp, "127.0.0.1", 80))
 Get information from events:
 
 An `Event` is a map of NodeName (string) to NodeInfo, which holds NodeStatus, Host etc.
-```golang
+```go
 type Event map[string]NodeInfo
 
 type NodeInfo struct {
