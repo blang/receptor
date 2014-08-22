@@ -13,7 +13,7 @@ different setup as a plugin, the workflow is quite similar though.
 
 ### Requirements and Lifecycle
 There are 2 requirements every plugin needs to fulfill:
-- Implement the [Watcher Interface](pipe/watcher.go) or [Reactor Interface](pipe/reactor.go)
+- Implement the [Watcher Interface](../pipe/watcher.go) or [Reactor Interface](../pipe/reactor.go)
 - Serve the Plugin using plugin interface
 
 Both steps are described below in detail, but first some basics:
@@ -162,3 +162,5 @@ type NodeInfo struct {
   Port   uint16
 }
 ```
+
+For more information see [events.go](../pipe/events.go).
