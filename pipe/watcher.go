@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 )
 
+// Watcher is the source of events, it "watches" a system and generates
+// events which are then send down the pipeline.
 type Watcher interface {
 
-	// Setup configures the generic watcher with a config
-	Setup(json.RawMessage) error
+	// Setup configures the watcher with a global config
+	Setup(cfg json.RawMessage) error
 
-	// Handle job and return a handler to start watching
-	Accept(json.RawMessage) (Endpoint, error)
+	// Accept configures an instance of the watcher dedicated to a service.
+	// Returns an Endpoint ready to communicate on the pipeline.
+	Accept(cfg json.RawMessage) (Endpoint, error)
 }
