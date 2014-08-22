@@ -1,6 +1,6 @@
 // +build integration_test
 
-package serf
+package serfwatcher
 
 import (
 	"encoding/json"

@@ -1,8 +1,8 @@
-package serf
+package serfwatcher
 
 import (
 	"encoding/json"
-	"github.com/blang/receptor/pipeline"
+	"github.com/blang/receptor/pipe"
 	serfc "github.com/hashicorp/serf/client"
 	"log"
 	"time"
@@ -26,7 +26,7 @@ func (w *Watcher) Setup(cfgData json.RawMessage) error {
 	return nil
 }
 
-func (w *Watcher) Accept(cfgData json.RawMessage) (pipeline.Endpoint, error) {
+func (w *Watcher) Accept(cfgData json.RawMessage) (pipe.Endpoint, error) {
 	var serviceCfg ServiceConfig
 	err := json.Unmarshal(cfgData, &serviceCfg)
 	if err != nil {
@@ -38,9 +38,9 @@ func (w *Watcher) Accept(cfgData json.RawMessage) (pipeline.Endpoint, error) {
 		AuthKey: serviceCfg.AuthKey,
 	}
 
-	return pipeline.EndpointFunc(func(eventCh chan pipeline.Event, closeCh chan struct{}) {
+	return pipe.EndpointFunc(func(eventCh chan pipe.Event, closeCh chan struct{}) {
 		var client *serfc.RPCClient
-		_, fullEventCh := pipeline.Bookkeeper(eventCh)
+		_, fullEventCh := pipe.Bookkeeper(eventCh)
 		defer func() {
 			if client != nil {
 				client.Close()
@@ -63,27 +63,21 @@ func (w *Watcher) Accept(cfgData json.RawMessage) (pipeline.Endpoint, error) {
 				members, err := client.Members()
 				if err != nil {
 					log.Printf("Error while fetching serf members: %s\n", err)
-					fullEventCh <- &pipeline.MultiNode{} // Mark all nodes as down
+					fullEventCh <- pipe.NewEvent() // Mark all nodes as down
 					break
 				}
 
-				evt := &pipeline.MultiNode{}
+				evt := pipe.NewEvent()
 				for _, m := range members {
 					if m.Status != "alive" || !matchTags(serviceCfg.Tags, m.Tags) {
 						continue
 					}
 					log.Printf("Node: %s:%d is %s\n", m.Addr.String(), m.Port, m.Status)
-
-					evt.Events = append(evt.Events, &pipeline.SingleNode{
-						EName: m.Name,
-						EType: pipeline.EventNodeUp,
-						EHost: m.Addr.String(),
-						EPort: int(m.Port),
-					})
+					evt.AddNewNode(m.Name, pipe.NodeUp, m.Addr.String(), m.Port)
 				}
-
-				fullEventCh <- evt
-
+				if len(evt) > 0 {
+					fullEventCh <- evt
+				}
 				select {
 				case <-closeCh:
 					return
