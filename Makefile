@@ -12,6 +12,8 @@ test:
 
 all: test build plugins
 
+runexample:
+	./bin/receptor -config="./receptor_example.conf.json" -plugins="./bin/plugins/"
 
 clean:
 	@rm -rf -- "./bin"
