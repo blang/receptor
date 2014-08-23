@@ -17,11 +17,15 @@ var (
 type Receptor struct {
 	Services     []*Service
 	PluginLookup plugin.LookupService
+	DoneCh       chan struct{} // Is closed if all service components are shut down
+	FailureCh    chan struct{} // Is closed if a service fails
 }
 
 func NewReceptor(lookup plugin.LookupService) *Receptor {
 	return &Receptor{
 		PluginLookup: lookup,
+		DoneCh:       make(chan struct{}),
+		FailureCh:    make(chan struct{}),
 	}
 }
 
@@ -35,10 +39,29 @@ func (r *Receptor) Init(cfg *Config) error {
 }
 
 func (r *Receptor) Start() {
+	wg := sync.WaitGroup{}
+	wg.Add(len(r.Services))
+	failureCh := make(chan struct{}, len(r.Services))
 	for _, service := range r.Services {
 		service.Start()
+		go func(service *Service) {
+			<-service.DoneCh
+			log.Printf("[Service %s] shutdown complete", service.Name())
+			failureCh <- struct{}{}
+			wg.Done()
+		}(service)
 		log.Printf("[Service %s] started", service.Name())
 	}
+
+	// Shutdown receptor if service fails
+	// Close doneCh if all services are down
+	go func() {
+		<-failureCh
+		close(r.FailureCh)
+		r.Stop()
+		wg.Wait()
+		close(r.DoneCh)
+	}()
 }
 
 // Stop stops all registered services and blocks until all stopped or reached timeout.
@@ -48,7 +71,6 @@ func (r *Receptor) Stop() {
 	for _, service := range r.Services {
 		go func(service *Service) {
 			service.Stop(SERVICE_STOP_TIMEOUT)
-			log.Printf("[Service %s] stopped", service.Name())
 			wg.Done()
 		}(service)
 	}

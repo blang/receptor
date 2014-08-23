@@ -79,15 +79,15 @@ func (w *RestAPIServerWatcher) Accept(cfgData json.RawMessage) (pipe.Endpoint, e
 
 			fmt.Fprintln(w, "OK")
 		})
-		go func() {
-			if !w.IsRunning {
-				w.IsRunning = true
-				go func() {
-					w.Server.ListenAndServe() // Log error
-				}()
-			}
-			<-closeCh
-			close(eventCh)
-		}()
+
+		if !w.IsRunning {
+			w.IsRunning = true
+			go func() {
+				w.Server.ListenAndServe() // Log error
+			}()
+		}
+		<-closeCh
+		close(eventCh)
+
 	}), nil
 }

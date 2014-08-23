@@ -151,8 +151,9 @@ func (s *Lookup) Cleanup(timeout time.Duration) {
 	wg.Wait()
 
 	for _, socket := range s.sockets {
+		_, staterr := os.Stat(socket)
 		err := os.Remove(socket)
-		if err != nil {
+		if err != nil && staterr == nil {
 			log.Printf("Could not remove socket %s", socket)
 		}
 	}

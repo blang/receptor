@@ -36,9 +36,17 @@ func main() {
 	// Manage clean shutdown
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM)
-	<-c
-	fmt.Println("Shutdown initiated")
 
-	r.Stop()
-	fmt.Println("Shutdown complete")
+	select {
+	case <-c:
+		fmt.Println("Graceful shutdown initiated")
+
+		r.Stop()
+		fmt.Println("Graceful shutdown complete")
+	case <-r.FailureCh:
+		fmt.Println("At least one service failed, shutdown")
+		r.Stop()
+		fmt.Println("Shutdown complete")
+		os.Exit(2)
+	}
 }

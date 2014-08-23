@@ -21,6 +21,7 @@ type ManagedEndpoint struct {
 	Endpoint Endpoint
 	DoneCh   chan struct{}
 	CloseCh  chan struct{}
+	closed   bool
 }
 
 var ERROR_HANDLER_WAIT_TIMEOUT = errors.New("Handler wait timed out")
@@ -43,7 +44,10 @@ func (m *ManagedEndpoint) Handle(eventCh chan Event) {
 
 // Stop signals the handler to exit by using its close channel, stop will not close the event channel.
 func (m *ManagedEndpoint) Stop() {
-	close(m.CloseCh)
+	if !m.closed {
+		close(m.CloseCh)
+		m.closed = true
+	}
 }
 
 // Wait waits for the handler to stop.
